@@ -52,19 +52,49 @@
     <div class="max-w-6xl mx-auto">
         
         <!-- HEADER и АУТЕНТИФИКАЦИЯ -->
-        <header class="flex flex-col sm:flex-row justify-between items-center py-4 mb-8 glass-card rounded-2xl p-6">
-            <h1 class="text-3xl font-extrabold text-white mb-4 sm:mb-0">
+        <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center py-4 mb-8 glass-card rounded-2xl p-6">
+            <h1 class="text-3xl font-extrabold text-white mb-4 lg:mb-0">
                 <span class="text-red-500 text-4xl mr-2">▶</span> MyTube <span class="text-mac-lilac text-lg font-light hidden sm:inline">| Cloud Video Platform</span>
             </h1>
-            <div id="auth-status" class="flex items-center space-x-3">
-                <span id="user-info" class="text-sm font-semibold text-gray-300"></span>
-                <button id="google-login-btn" class="btn-lilac text-white font-medium py-2 px-4 rounded-xl shadow-lg transition transform hover:scale-105">
-                    Войти через Google
-                </button>
-                <button id="logout-btn" class="bg-gray-700 text-white font-medium py-2 px-4 rounded-xl shadow-md hover:bg-gray-600 transition hidden">
-                    Выйти
-                </button>
+            
+            <!-- Блок АВТОРИЗАЦИИ -->
+            <div id="auth-status" class="w-full lg:w-auto flex flex-col items-end">
+                <div class="flex items-center space-x-3 mb-3 w-full lg:w-auto justify-end">
+                    <span id="user-info" class="text-sm font-semibold text-gray-300"></span>
+                    <button id="logout-btn" class="bg-gray-700 text-white font-medium py-2 px-4 rounded-xl shadow-md hover:bg-gray-600 transition hidden">
+                        Выйти
+                    </button>
+                </div>
+
+                <!-- Опции ВХОДА (Показываются, когда пользователь не авторизован) -->
+                <div id="login-options" class="w-full lg:w-auto flex flex-col lg:flex-row space-y-3 lg:space-y-0 lg:space-x-3 hidden">
+                    
+                    <!-- Вход через Google -->
+                    <button id="google-login-btn" class="btn-lilac text-white font-medium py-2 px-4 rounded-xl shadow-lg transition transform hover:scale-105 w-full lg:w-auto">
+                        Войти через Google
+                    </button>
+
+                    <!-- Вход / Регистрация по Email -->
+                    <div class="glass-card p-3 rounded-xl flex flex-col space-y-2 lg:min-w-[400px]">
+                        <input type="email" id="auth-email" placeholder="Email"
+                            class="p-2 bg-white/30 text-white placeholder-gray-300 border border-white/10 rounded-lg focus:ring-2 focus:ring-mac-lilac focus:outline-none">
+                        <input type="password" id="auth-password" placeholder="Пароль (мин 6 символов)"
+                            class="p-2 bg-white/30 text-white placeholder-gray-300 border border-white/10 rounded-lg focus:ring-2 focus:ring-mac-lilac focus:outline-none">
+                        <div class="flex space-x-2">
+                            <button id="email-register-btn" class="flex-1 bg-green-600 text-white font-medium py-2 px-4 rounded-xl hover:bg-green-500 transition text-sm">
+                                Регистрация
+                            </button>
+                            <button id="email-login-btn" class="flex-1 bg-indigo-600 text-white font-medium py-2 px-4 rounded-xl hover:bg-indigo-500 transition text-sm">
+                                Вход по Email
+                            </button>
+                        </div>
+                        <p id="email-auth-status" class="text-xs mt-1 text-yellow-300"></p>
+                    </div>
+
+                </div>
             </div>
+            <!-- Конец Блока АВТОРИЗАЦИИ -->
+
         </header>
 
         <!-- РАЗДЕЛ ЗАГРУЗКИ ВИДЕО -->
@@ -124,8 +154,8 @@
         // 2. КОНФИГУРАЦИЯ CLOUDINARY (ЗАМЕНИТЕ ЭТИ ДВА ПОЛЯ!)
         // =======================================================================
         const CLOUDINARY_CONFIG = {
-            cloudName: "dv05ksrho", 
-            uploadPreset: "dv05ksrho" 
+            cloudName: "ВАШ_CLOUD_NAME_СЮДА", 
+            uploadPreset: "ВАШ_PRESET_NAME_СЮДА" 
         };
         // =======================================================================
 
@@ -135,7 +165,7 @@
         const db = firebase.firestore();
         
         // --- Элементы UI ---
-        const loginBtn = document.getElementById('google-login-btn');
+        const googleLoginBtn = document.getElementById('google-login-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const userInfo = document.getElementById('user-info');
         const uploadSection = document.getElementById('upload-section');
@@ -143,33 +173,79 @@
         const uploadStatus = document.getElementById('upload-status');
         const videoGrid = document.getElementById('video-grid');
         const uploadLoader = document.getElementById('upload-loader');
+        const loginOptions = document.getElementById('login-options'); // Новый элемент
+        
+        const authEmailInput = document.getElementById('auth-email'); // Новый
+        const authPasswordInput = document.getElementById('auth-password'); // Новый
+        const emailRegisterBtn = document.getElementById('email-register-btn'); // Новый
+        const emailLoginBtn = document.getElementById('email-login-btn'); // Новый
+        const emailAuthStatus = document.getElementById('email-auth-status'); // Новый
 
 
-        // --- 3. АВТОРИЗАЦИЯ ---
-        loginBtn.addEventListener('click', () => {
+        // --- 3. АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ ---
+
+        // 3.1. Вход через Google
+        googleLoginBtn.addEventListener('click', () => {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).catch(error => {
                 uploadStatus.textContent = `Ошибка входа: ${error.message}`;
             });
         });
 
+        // 3.2. Регистрация по Email
+        emailRegisterBtn.addEventListener('click', () => {
+            const email = authEmailInput.value;
+            const password = authPasswordInput.value;
+            emailAuthStatus.textContent = 'Обработка регистрации...';
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(userCredential => {
+                    emailAuthStatus.textContent = `✅ Успешная регистрация! Выполнен вход как: ${userCredential.user.email}`;
+                    // Здесь можно добавить запрос имени пользователя, если нужно.
+                    // Для простоты, пока просто логируем.
+                })
+                .catch(error => {
+                    console.error("Registration Error:", error);
+                    emailAuthStatus.textContent = `❌ Ошибка регистрации: ${error.message}`;
+                });
+        });
+
+        // 3.3. Вход по Email
+        emailLoginBtn.addEventListener('click', () => {
+            const email = authEmailInput.value;
+            const password = authPasswordInput.value;
+            emailAuthStatus.textContent = 'Обработка входа...';
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then(userCredential => {
+                    emailAuthStatus.textContent = `✅ Успешный вход! Добро пожаловать, ${userCredential.user.email}!`;
+                })
+                .catch(error => {
+                    console.error("Login Error:", error);
+                    emailAuthStatus.textContent = `❌ Ошибка входа: ${error.message}`;
+                });
+        });
+
+        // 3.4. Выход
         logoutBtn.addEventListener('click', () => {
             auth.signOut();
         });
 
-        // Отслеживание статуса авторизации в реальном времени
+        // 3.5. Отслеживание статуса авторизации в реальном времени
         auth.onAuthStateChanged(user => {
             if (user) {
-                // Разбиваем имя по пробелу и берем первое слово (имя)
-                userInfo.textContent = `Привет, ${user.displayName.split(' ')[0]}!`; 
-                loginBtn.classList.add('hidden');
+                // Пользователь авторизован
+                const displayName = user.displayName ? user.displayName.split(' ')[0] : user.email;
+                userInfo.textContent = `Привет, ${displayName}!`; 
                 logoutBtn.classList.remove('hidden');
                 uploadSection.classList.remove('hidden');
+                loginOptions.classList.add('hidden'); // Скрыть форму входа/регистрации
             } else {
+                // Пользователь не авторизован
                 userInfo.textContent = 'Войдите, чтобы загружать видео.';
-                loginBtn.classList.remove('hidden');
                 logoutBtn.classList.add('hidden');
                 uploadSection.classList.add('hidden');
+                loginOptions.classList.remove('hidden'); // Показать форму входа/регистрации
             }
         });
 
@@ -197,7 +273,7 @@
                 db.collection("videos").add({
                     title: title,
                     url: result.info.secure_url, 
-                    author: user.displayName,
+                    author: user.displayName || user.email, // Используем email, если нет displayName
                     author_uid: user.uid,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 })
@@ -216,7 +292,7 @@
 
         document.getElementById("upload-widget").addEventListener("click", function(){
             if (!auth.currentUser) {
-                uploadStatus.textContent = "Пожалуйста, войдите через Google!";
+                uploadStatus.textContent = "Пожалуйста, войдите, чтобы начать загрузку!";
                 return;
             }
             if (!videoTitleInput.value.trim()) {
@@ -228,24 +304,6 @@
             uploadLoader.classList.remove('hidden');
             uploadWidget.open();
         });
-        
-        
-auth.onAuthStateChanged(user => {
-    if (user) {
-        // ... (показываем имя, прячем кнопку входа, показываем раздел загрузки)
-        userInfo.textContent = `Привет, ${user.displayName.split(' ')[0]}!`; 
-        loginBtn.classList.add('hidden');
-        logoutBtn.classList.remove('hidden');
-        uploadSection.classList.remove('hidden');
-    } else {
-        // ... (прячем раздел загрузки, показываем кнопку входа)
-        userInfo.textContent = 'Войдите, чтобы загружать видео.';
-        loginBtn.classList.remove('hidden');
-        logoutBtn.classList.add('hidden');
-        uploadSection.classList.add('hidden');
-    }
-});
-
 
 
         // --- 5. ЗАГРУЗКА ГАЛЕРЕИ В РЕАЛЬНОМ ВРЕМЕНИ (onSnapshot) ---

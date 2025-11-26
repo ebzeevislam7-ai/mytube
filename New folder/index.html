@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Рабочий Видеохостинг: Загрузка и Воспроизведение</title>
+    <style>
+        body { font-family: Roboto, sans-serif; background: #f9f9f9; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #ccc; padding-bottom: 15px; }
+        .logo { font-size: 24px; font-weight: bold; color: #cc0000; }
+        
+        #google-login-btn { background-color: #4285F4; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; }
+        #upload-section { margin-top: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: white; display: none; }
+        
+        #upload-widget { background-color: #ff0000; color: white; padding: 10px 15px; border: none; cursor: pointer; border-radius: 5px;}
+        
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 20px; }
+        .video-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .video-card video { width: 100%; border-radius: 5px; margin-bottom: 10px; }
+        
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 20px; height: 20px; animation: spin 2s linear infinite; display: none; margin: 10px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo">MyTube 🚀</div>
+        <div id="auth-status">
+            <button id="google-login-btn">Войти через Google</button>
+            <button id="logout-btn" style="display: none;">Выйти</button>
+            <span id="user-info"></span>
+        </div>
+    </div>
+
+    <div id="upload-section">
+        <h3>Загрузка видео</h3>
+        <input type="text" id="video-title" placeholder="Введите заголовок видео" style="padding: 10px; width: 80%; margin-bottom: 10px; border: 1px solid #ccc;">
+        <button id="upload-widget">Выбрать и Загрузить Файл</button>
+        <div class="loader" id="upload-loader"></div>
+        <p id="upload-status"></p>
+    </div>
+
+    <h2>Последние видео</h2>
+    <div class="video-grid" id="video-grid">
+        </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
+    
+    <script src="app.js"></script>
+</body>
+</html>

@@ -228,6 +228,24 @@
             uploadLoader.classList.remove('hidden');
             uploadWidget.open();
         });
+        
+        
+auth.onAuthStateChanged(user => {
+    if (user) {
+        // ... (показываем имя, прячем кнопку входа, показываем раздел загрузки)
+        userInfo.textContent = `Привет, ${user.displayName.split(' ')[0]}!`; 
+        loginBtn.classList.add('hidden');
+        logoutBtn.classList.remove('hidden');
+        uploadSection.classList.remove('hidden');
+    } else {
+        // ... (прячем раздел загрузки, показываем кнопку входа)
+        userInfo.textContent = 'Войдите, чтобы загружать видео.';
+        loginBtn.classList.remove('hidden');
+        logoutBtn.classList.add('hidden');
+        uploadSection.classList.add('hidden');
+    }
+});
+
 
 
         // --- 5. ЗАГРУЗКА ГАЛЕРЕИ В РЕАЛЬНОМ ВРЕМЕНИ (onSnapshot) ---

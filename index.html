@@ -57,7 +57,7 @@
     <div class="max-w-6xl mx-auto">
         
         <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center py-4 mb-8 glass-card rounded-2xl p-6">
-            <h1 id="logo" class="text-3xl font-extrabold text-white mb-4 lg:mb-0 cursor-pointer hover:text-red-400 transition" onclick="showPage('grid')">
+            <h1 id="navbar-home-btn" class="text-3xl font-extrabold text-white mb-4 lg:mb-0 cursor-pointer hover:text-red-400 transition" onclick="showPage('grid')">
                 <span class="text-red-500 text-4xl mr-2">▶</span> MyTube <span class="text-mac-lilac text-lg font-light hidden sm:inline">| Cloud Video Platform</span>
             </h1>
             
@@ -277,6 +277,10 @@
                     commentsUnsubscribe();
                     commentsUnsubscribe = null;
                 }
+                // *** ФИКС НАВИГАЦИИ: Обновление сетки после возвращения ***
+                // Это гарантирует, что список видео будет актуальным, 
+                // хотя onSnapshot и так должен это делать.
+                // listenForVideos(); 
             } else if (pageName === 'watch') {
                 mainGridView.classList.add('hidden');
                 watchPageView.classList.remove('hidden');
@@ -287,14 +291,35 @@
             currentVideoId = videoId;
             showPage('watch');
             
-            const videoData = allVideos.find(v => v.id === videoId);
-            if (!videoData) {
-                videoPlayerContainer.innerHTML = `<p class="text-red-400">Видео не найдено. Вернитесь на главную.</p>`;
-                return;
-            }
-
-            renderWatchPage(videoData);
+            // Загружаем актуальные данные и рендерим
+            fetchVideoAndRender(videoId);
             setupCommentsListener(videoId);
+        }
+
+        // *** НОВАЯ ФУНКЦИЯ: Загружает ОДНО видео и рендерит страницу просмотра ***
+        async function fetchVideoAndRender(videoId) {
+            try {
+                const doc = await db.collection("videos").doc(videoId).get();
+                if (!doc.exists) {
+                    videoPlayerContainer.innerHTML = `<p class="text-red-400">Видео не найдено. Вернитесь на главную.</p>`;
+                    return;
+                }
+                const videoData = doc.data();
+                videoData.id = doc.id;
+                
+                // Обновляем allVideos в глобальном состоянии для корректного рендера
+                const index = allVideos.findIndex(v => v.id === videoId);
+                if (index > -1) {
+                    allVideos[index] = videoData;
+                } else {
+                    allVideos.push(videoData);
+                }
+
+                renderWatchPage(videoData);
+            } catch (error) {
+                console.error("Error fetching video for watch page:", error);
+                uploadStatus.textContent = `❌ Ошибка загрузки видео: ${error.message}`;
+            }
         }
         
         // =======================================================================
@@ -321,6 +346,7 @@
                 const date = video.timestamp ? 
                              video.timestamp.toDate().toLocaleDateString('ru-RU') : 
                              '—';
+                // БЕРЕМ КОЛИЧЕСТВО ЛАЙКОВ ИЗ ОБЪЕКТА likes
                 const likesCount = Object.keys(video.likes || {}).length;
 
                 const card = document.createElement('div');
@@ -345,7 +371,7 @@
                     </div>
                     ${isCurrentUserAdmin ? 
                         `<button class="delete-btn mt-3 bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md hover:bg-red-500 transition" 
-                                     data-doc-id="${doc.id}" data-video-title="${video.title}" onclick="deleteVideo('${doc.id}', '${video.title}')">
+                                    data-doc-id="${doc.id}" data-video-title="${video.title}" onclick="deleteVideo('${doc.id}', '${video.title}')">
                             Удалить (Админ)
                         </button>` : ''}
                 `;
@@ -386,7 +412,7 @@
 
                         ${isCurrentUserAdmin ? 
                             `<button class="delete-btn bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md hover:bg-red-500 transition" 
-                                         data-doc-id="${video.id}" data-video-title="${video.title}" onclick="deleteVideo('${video.id}', '${video.title}')">
+                                                data-doc-id="${video.id}" data-video-title="${video.title}" onclick="deleteVideo('${video.id}', '${video.title}')">
                                 Удалить Видео (Админ)
                             </button>` : ''}
                     </div>
@@ -465,7 +491,17 @@
                         transaction.update(videoRef, { [`likes.${userId}`]: true });
                     }
                 });
-            }).catch(error => {
+            })
+            // *** ФИКС ЛАЙКОВ: Перезагрузка данных после успешной транзакции ***
+            .then(() => {
+                uploadStatus.textContent = '✅ Статус лайка обновлен.';
+                setTimeout(() => uploadStatus.textContent = '', 3000);
+                if (currentVideoId === videoId) {
+                    // Перезагружаем данные видео, чтобы обновить UI (количество лайков)
+                    fetchVideoAndRender(videoId);
+                }
+            })
+            .catch(error => {
                 console.error("Like Transaction Failed:", error);
                 uploadStatus.textContent = `❌ Ошибка при обработке лайка: ${error.message}`;
             });
@@ -498,7 +534,7 @@
                     snapshot.forEach(doc => {
                         const comment = doc.data();
                         const date = comment.timestamp ? 
-                                         comment.timestamp.toDate().toLocaleString('ru-RU') : '—';
+                                             comment.timestamp.toDate().toLocaleString('ru-RU') : '—';
                         
                         const commentDiv = document.createElement('div');
                         commentDiv.className = 'border-t border-white/10 pt-3';
@@ -627,10 +663,10 @@
                 postCommentBtn.disabled = true;
             }
             
-            // Re-render the watch page to update like/delete buttons if auth state changes
+            // *** ФИКС AUTH: Перерисовка страницы просмотра для обновления кнопок ***
             if (currentVideoId) {
-                const latestVideoData = allVideos.find(v => v.id === currentVideoId);
-                if (latestVideoData) renderWatchPage(latestVideoData);
+                // Если мы находимся на странице просмотра, перезагрузить данные и рендерить
+                fetchVideoAndRender(currentVideoId);
             }
         });
 
@@ -638,89 +674,24 @@
         // =======================================================================
         // 9. UPLOAD WIDGET SETUP
         // =======================================================================
-        const uploadWidget = cloudinary.createUploadWidget({
-            cloudName: CLOUDINARY_CONFIG.cloudName, 
-            uploadPreset: CLOUDINARY_CONFIG.uploadPreset,
-            resourceType: "video", 
-            clientAllowedFormats: ["mp4", "mov", "avi"],
-            maxFileSize: 100000000 // 100 МБ
-        }, (error, result) => { 
-            uploadLoader.classList.add('hidden'); 
-            
-            if (!error && result && result.event === "success") { 
-                const user = auth.currentUser;
-                const title = videoTitleInput.value.trim();
-
-                if (!title) {
-                    uploadStatus.textContent = '❌ Ошибка: Введите заголовок видео!';
-                    return;
-                }
-                
-                // Сохраняем метаданные в Firestore
-                db.collection("videos").add({
-                    title: title,
-                    url: result.info.secure_url,
-                    author: user.displayName || user.email.split('@')[0],
-                    authorUid: user.uid,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    likes: {} // Инициализируем пустой map для лайков
-                })
-                .then(() => {
-                    uploadStatus.textContent = `✅ Видео "${title}" успешно опубликовано!`;
-                    videoTitleInput.value = ''; // Clear input
-                })
-                .catch(e => {
-                    uploadStatus.textContent = `❌ Ошибка записи в базу: ${e.message}`;
-                    console.error("Database write error:", e);
+        
+        // --- Video Grid Listener (Runs immediately) ---
+        // Запускаем слушателя для главной сетки видео
+        function listenForVideos() {
+            db.collection("videos")
+                .orderBy("timestamp", "desc")
+                .onSnapshot(snapshot => {
+                    renderVideos(snapshot);
+                }, error => {
+                    console.error("FIREBASE ERROR: Video loading failed.", error);
+                    videoGrid.innerHTML = `<p class="text-red-400 col-span-full">
+                        **Ошибка загрузки списка видео.** ${error.message}
+                    </p>`;
                 });
+        }
 
-            } else if (result && result.event === "abort") {
-                uploadStatus.textContent = 'Загрузка отменена пользователем.';
-            } else if (error) {
-                uploadStatus.textContent = `❌ Ошибка загрузки Cloudinary: ${error.message}`;
-            }
-        });
-
-        document.getElementById('upload-widget').addEventListener('click', () => {
-            if (!auth.currentUser) {
-                uploadStatus.textContent = '❌ Войдите, чтобы загружать видео.';
-                return;
-            }
-            
-            const title = videoTitleInput.value.trim();
-            if (!title) {
-                uploadStatus.textContent = '❌ Введите заголовок видео перед выбором файла!';
-                videoTitleInput.focus();
-                return;
-            }
-            
-            uploadStatus.textContent = 'Открытие виджета загрузки...';
-            uploadLoader.classList.remove('hidden');
-
-            uploadWidget.open();
-        });
-
-
+        listenForVideos(); // Start the main listener
         // =======================================================================
-        // 10. INITIAL DATA LOAD (Real-time listener for the main grid)
-        // =======================================================================
-        // Подписываемся на ВСЕ видео, отсортированные по времени создания (новые сверху)
-        db.collection("videos").orderBy("timestamp", "desc").onSnapshot(snapshot => {
-            // Эта функция будет вызываться каждый раз, когда данные изменяются (добавление, удаление, лайк)
-            renderVideos(snapshot);
-
-            // Если пользователь находится на странице просмотра, перерисовываем метаданные, 
-            // чтобы обновить счетчик лайков
-            if (currentVideoId) {
-                 const latestVideoData = allVideos.find(v => v.id === currentVideoId);
-                 if (latestVideoData) renderWatchPage(latestVideoData);
-            }
-            
-        }, error => {
-            console.error("Error fetching videos:", error);
-            videoGrid.innerHTML = '<p class="text-center col-span-full text-red-400">Не удалось загрузить видео. Проверьте подключение к Firestore.</p>';
-        });
-
     </script>
 </body>
 </html>

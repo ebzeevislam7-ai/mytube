@@ -9,18 +9,23 @@ import {
 } from 'firebase/firestore';
 import { Heart, MessageSquare, Send, User, LogOut } from 'lucide-react'; 
 
-// Setting Firebase log level for debugging purposes
+// Установка уровня логирования Firebase (помогает при отладке)
 setLogLevel('debug');
 
-// Global variables provided by the Canvas environment
+// Глобальные переменные, предоставляемые средой Canvas
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-// Firebase initialization (executed once)
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+// Инициализация Firebase (выполняется один раз)
+let app, db, auth;
+try {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  auth = getAuth(app);
+} catch (error) {
+  console.error("Firebase Initialization Error:", error);
+}
 
 // Main Application Component
 const App = () => {
@@ -33,20 +38,26 @@ const App = () => {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
   
+  // --- Атомарное определение путей к коллекциям ---
+  const videosCollectionPath = useMemo(() => `artifacts/${appId}/public/data/videos`, []);
+  const commentsCollectionPath = useMemo(() => `artifacts/${appId}/public/data/comments`, []);
+
   // --- Sign Out Function ---
   const handleSignOut = useCallback(async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
-      // Clean up UI state
       setSelectedVideo(null); 
       setVideos([]);
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error("Ошибка при выходе из системы:", error);
     }
-  }, [auth]);
+  }, []);
 
   // --- Auth Initialization and Listener ---
   useEffect(() => {
+    if (!auth) return;
+
     // 1. Authentication State Listener
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -87,23 +98,21 @@ const App = () => {
 
   // --- Load Video List (Public Data) ---
   useEffect(() => {
-    // GUARD: Only query Firestore once authentication state is known
-    if (!isAuthReady) return; 
+    // Усиленный GUARD: Только запрос Firestore после готовности аутентификации и наличия db
+    if (!isAuthReady || !db) return; 
 
-    const videosCollectionPath = `artifacts/${appId}/public/data/videos`;
+    // Используем атомарно определенный путь
     const q = query(collection(db, videosCollectionPath), orderBy('timestamp', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const videoList = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        // Convert likes map to object and calculate count
         likes: doc.data().likes || {},
         // Filter out false/null likes when counting
         likeCount: Object.values(doc.data().likes || {}).filter(val => val).length
       }));
       setVideos(videoList);
-      // Select the first video if none is selected
       if (!selectedVideo && videoList.length > 0) {
         setSelectedVideo(videoList[0]);
       }
@@ -112,20 +121,18 @@ const App = () => {
     });
 
     return () => unsubscribe();
-  }, [isAuthReady, selectedVideo]);
-
+  }, [isAuthReady, db, selectedVideo]); // Добавлена зависимость db
 
   // --- Load Comments for Selected Video (Real-time) ---
   useEffect(() => {
-    if (!isAuthReady || !selectedVideo?.id) {
+    if (!isAuthReady || !selectedVideo?.id || !db) {
       setComments([]);
       return;
     }
     
     setLoadingComments(true);
-    const commentsCollectionPath = `artifacts/${appId}/public/data/comments`;
     
-    // Query with filtering and sorting (requires index)
+    // Используем атомарно определенный путь
     const q = query(
       collection(db, commentsCollectionPath),
       where('videoId', '==', selectedVideo.id),
@@ -136,7 +143,6 @@ const App = () => {
       const loadedComments = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        // Format timestamp for display
         displayTime: doc.data().timestamp?.toDate()?.toLocaleTimeString('ru-RU', { 
           day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' 
         }) || 'Только что'
@@ -149,63 +155,59 @@ const App = () => {
     });
 
     return () => unsubscribe();
-  }, [isAuthReady, selectedVideo?.id]);
+  }, [isAuthReady, db, selectedVideo?.id]); // Добавлена зависимость db
 
 
   // --- Like/Unlike Function (Optimized for speed) ---
   const handleLike = useCallback(async (video) => {
-    if (!userId) {
-      console.warn("User is not authenticated to like.");
+    if (!userId || !db) {
+      console.warn("Пользователь не авторизован или DB недоступна.");
       return;
     }
     
-    const videoRef = doc(db, `artifacts/${appId}/public/data/videos`, video.id);
+    const videoRef = doc(db, videosCollectionPath, video.id);
     const currentLikes = video.likes || {};
-    // Check if the current user has a TRUE value for their like
     const hasLiked = currentLikes[userId] === true;
     
     const updateData = {};
 
     if (hasLiked) {
-      updateData[`likes.${userId}`] = false; // Mark as unliked (or remove if using server-side rules)
+      updateData[`likes.${userId}`] = false; 
     } else {
-      updateData[`likes.${userId}`] = true; // Mark as liked
+      updateData[`likes.${userId}`] = true; 
     }
     
     try {
-      // Atomic update for fast operation
       await updateDoc(videoRef, updateData);
     } catch (error) {
-      console.error("Error updating like status:", error);
+      console.error("Ошибка при обновлении лайка:", error);
     }
-  }, [userId]);
+  }, [userId, videosCollectionPath]);
 
 
   // --- Comment Submission Function ---
   const handleCommentSubmit = useCallback(async (e) => {
     e.preventDefault();
-    if (!userId || !selectedVideo?.id || !newCommentText.trim()) {
-      console.warn("Cannot submit comment: missing user, video, or text.");
+    if (!userId || !selectedVideo?.id || !newCommentText.trim() || !db) {
+      console.warn("Невозможно отправить комментарий: нет пользователя, видео, текста или DB.");
       return;
     }
-    
-    const commentsCollectionPath = `artifacts/${appId}/public/data/comments`;
-    
+        
     const newComment = {
       videoId: selectedVideo.id,
       userId: userId,
       userName: userName, 
       text: newCommentText.trim(),
-      timestamp: serverTimestamp(), // Use server timestamp for reliable ordering
+      timestamp: serverTimestamp(), 
     };
     
     try {
       await addDoc(collection(db, commentsCollectionPath), newComment);
-      setNewCommentText(''); // Clear input on success
+      setNewCommentText(''); 
     } catch (error) {
-      console.error("Error adding comment:", error);
+      console.error("Ошибка при добавлении комментария:", error);
     }
-  }, [userId, userName, selectedVideo?.id, newCommentText]);
+  }, [userId, userName, selectedVideo?.id, newCommentText, commentsCollectionPath]);
 
   // Display "Loading" until authentication state is resolved
   if (!isAuthReady) {

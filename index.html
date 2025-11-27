@@ -3,48 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyTube: Онлайн Видеохостинг (Enhanced Mac-Vibe)</title>
+    <title>MyTube: Онлайн Видеохостинг (YouTube-like Enhanced)</title>
     <!-- Шрифт Inter для чистоты дизайна -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
     <!-- Tailwind CSS CDN для стильного дизайна -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Стиль для эффекта "матового стекла" (Glassmorphism) */
+        /* Styling for the Mac-Vibe theme */
         .glass-card {
-            /* Усиленный эффект стекла */
-            background-color: rgba(255, 255, 255, 0.08); /* Меньше прозрачности */
-            backdrop-filter: blur(15px); /* Сильнее размытие */
+            background-color: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.2); /* Более глубокая тень */
+            box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.2);
         }
-        /* Усиленный фиолетовый градиентный фон для "вайба" */
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #4c1d95 40%, #8b5cf6 100%); /* Более насыщенный градиент */
+            background: linear-gradient(135deg, #0f172a 0%, #4c1d95 40%, #8b5cf6 100%);
             min-height: 100vh;
         }
         .text-mac-lilac { color: #D8BFD8; }
         .btn-lilac { background-color: #a78bfa; transition: all 0.3s; }
         .btn-lilac:hover { background-color: #8b5cf6; }
 
-        /* Кастомный стиль для видео, чтобы выглядело аккуратно */
-        .video-card video {
+        /* Custom style for video aspect ratio */
+        .video-player {
             width: 100%;
             aspect-ratio: 16 / 9;
             object-fit: cover;
-            border-radius: 6px;
+            border-radius: 12px;
             background-color: #000;
         }
 
-        /* Стильный лоадер */
+        /* Loader style */
         .loader { 
-            border: 4px solid #475569; /* Серый цвет */
-            border-top: 4px solid #a78bfa; /* Фиолетовый цвет */
+            border: 4px solid #475569;
+            border-top: 4px solid #a78bfa;
             border-radius: 50%; width: 20px; height: 20px; 
             animation: spin 1s linear infinite; 
-            display: inline-block; /* Для красивого расположения */
+            display: inline-block;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Utility for interactive elements */
+        .interactive-icon {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .interactive-icon:hover {
+            color: #a78bfa;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8 text-white">
@@ -53,11 +60,11 @@
         
         <!-- HEADER и АУТЕНТИФИКАЦИЯ -->
         <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center py-4 mb-8 glass-card rounded-2xl p-6">
-            <h1 class="text-3xl font-extrabold text-white mb-4 lg:mb-0">
+            <h1 id="logo" class="text-3xl font-extrabold text-white mb-4 lg:mb-0 cursor-pointer hover:text-red-400 transition" onclick="showPage('grid')">
                 <span class="text-red-500 text-4xl mr-2">▶</span> MyTube <span class="text-mac-lilac text-lg font-light hidden sm:inline">| Cloud Video Platform</span>
             </h1>
             
-            <!-- Блок АУТЕНТИФИКАЦИИ -->
+            <!-- Auth Block -->
             <div id="auth-status" class="w-full lg:w-auto flex flex-col items-end">
                 <div class="flex items-center space-x-3 mb-3 w-full lg:w-auto justify-end">
                     <span id="user-info" class="text-sm font-semibold text-gray-300"></span>
@@ -66,15 +73,11 @@
                     </button>
                 </div>
 
-                <!-- Опции ВХОДА (Показываются, когда пользователь не авторизован) -->
+                <!-- Login Options -->
                 <div id="login-options" class="w-full lg:w-auto flex flex-col lg:flex-row space-y-3 lg:space-y-0 lg:space-x-3 hidden">
-                    
-                    <!-- Вход через Google -->
                     <button id="google-login-btn" class="btn-lilac text-white font-medium py-2 px-4 rounded-xl shadow-lg transition transform hover:scale-105 w-full lg:w-auto">
                         Войти через Google
                     </button>
-
-                    <!-- Вход / Регистрация по Email -->
                     <div class="glass-card p-3 rounded-xl flex flex-col space-y-2 lg:min-w-[400px]">
                         <input type="email" id="auth-email" placeholder="Email"
                             class="p-2 bg-white/30 text-white placeholder-gray-300 border border-white/10 rounded-lg focus:ring-2 focus:ring-mac-lilac focus:outline-none">
@@ -93,36 +96,83 @@
 
                 </div>
             </div>
-            <!-- Конец Блока АУТЕНТИФИКАЦИИ -->
-
         </header>
+        
+        <!-- MAIN GRID VIEW (Главная страница) -->
+        <div id="main-grid-view">
+             <!-- UPLOAD SECTION -->
+            <section id="upload-section" class="mb-10 glass-card rounded-2xl p-6 hidden">
+                <h2 class="text-2xl font-semibold mb-4 text-mac-lilac">Загрузить видео</h2>
+                <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+                    <input type="text" id="video-title" placeholder="Введите заголовок видео (обязательно)" 
+                        class="flex-grow p-3 bg-white/20 text-white placeholder-gray-300 border border-white/20 rounded-xl focus:ring-2 focus:ring-mac-lilac focus:outline-none">
+                    
+                    <button id="upload-widget" class="btn-lilac text-white font-bold py-3 px-6 rounded-xl shadow-2xl transition transform hover:scale-105">
+                        Выбрать и Загрузить Файл (MP4, MOV)
+                    </button>
+                </div>
+                <div class="flex items-center mt-4 space-x-3">
+                    <div id="upload-loader" class="loader hidden"></div>
+                    <p id="upload-status" class="text-sm text-yellow-300"></p>
+                </div>
+            </section>
 
-        <!-- РАЗДЕЛ ЗАГРУЗКИ ВИДЕО -->
-        <section id="upload-section" class="mb-10 glass-card rounded-2xl p-6 hidden">
-            <h2 class="text-2xl font-semibold mb-4 text-mac-lilac">Загрузить видео</h2>
-            <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
-                <input type="text" id="video-title" placeholder="Введите заголовок видео (обязательно)" 
-                       class="flex-grow p-3 bg-white/20 text-white placeholder-gray-300 border border-white/20 rounded-xl focus:ring-2 focus:ring-mac-lilac focus:outline-none">
-                
-                <button id="upload-widget" class="btn-lilac text-white font-bold py-3 px-6 rounded-xl shadow-2xl transition transform hover:scale-105">
-                    Выбрать и Загрузить Файл (MP4, MOV)
-                </button>
-            </div>
-            <div class="flex items-center mt-4 space-x-3">
-                <div id="upload-loader" class="loader hidden"></div>
-                <p id="upload-status" class="text-sm text-yellow-300"></p>
-            </div>
-        </section>
+            <!-- VIDEO GALLERY -->
+            <section>
+                <h2 class="text-2xl font-bold mb-6 text-white">Последние публикации</h2>
+                <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <p class="text-center col-span-full text-gray-400">Загрузка видео...</p>
+                </div>
+            </section>
+        </div>
+        
+        <!-- WATCH PAGE VIEW (Страница просмотра видео) -->
+        <div id="watch-page-view" class="hidden">
+            <div class="flex flex-col lg:flex-row gap-6">
+                <!-- Main Content (Video Player and Comments) -->
+                <div class="lg:w-2/3">
+                    <div id="video-player-container" class="glass-card p-4 rounded-2xl mb-6">
+                        <!-- Dynamic Player Content Goes Here -->
+                    </div>
+                    
+                    <!-- LIKE/COMMENT SECTION -->
+                    <div id="video-metadata-section" class="mb-6">
+                        <!-- Dynamic Metadata (Likes, Title) Goes Here -->
+                    </div>
 
-        <!-- ГАЛЕРЕЯ ВИДЕО -->
-        <section>
-            <h2 class="text-2xl font-bold mb-6 text-white">Последние публикации</h2>
-            <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <p class="text-center col-span-full text-gray-400">Загрузка видео...</p>
-            </div>
-        </section>
+                    <!-- COMMENTS SECTION -->
+                    <div class="glass-card p-4 rounded-2xl">
+                        <h3 class="text-xl font-semibold mb-4 text-mac-lilac">Комментарии</h3>
+                        
+                        <!-- Comment Form -->
+                        <div id="comment-form-container" class="mb-6 hidden">
+                             <p id="comment-auth-message" class="text-sm text-yellow-300 mb-2">Войдите, чтобы оставить комментарий.</p>
+                            <textarea id="comment-text" rows="3" placeholder="Оставить комментарий..."
+                                class="w-full p-3 bg-white/10 text-white placeholder-gray-300 border border-white/10 rounded-lg focus:ring-2 focus:ring-mac-lilac focus:outline-none"></textarea>
+                            <button id="post-comment-btn" class="btn-lilac text-white font-medium py-2 px-4 rounded-xl mt-2 disabled:opacity-50" disabled>
+                                Отправить
+                            </button>
+                        </div>
+                        
+                        <!-- Comments List -->
+                        <div id="comments-list" class="space-y-4">
+                            <!-- Dynamic Comments Go Here -->
+                        </div>
+                    </div>
+                </div>
 
-        <!-- ФУТЕР -->
+                <!-- Recommendations Sidebar -->
+                <div class="lg:w-1/3">
+                    <h3 class="text-xl font-semibold mb-4 text-white">Рекомендации</h3>
+                    <div id="recommendations-list" class="space-y-3">
+                        <p class="text-gray-400">Загрузка рекомендаций...</p>
+                        <!-- Dynamic Recommended Videos Go Here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
         <footer class="mt-16 text-center text-gray-400 text-sm">
             <p>&copy; 2025 MyTube Project | Хостинг на базе Cloudinary & Firebase</p>
         </footer>
@@ -138,7 +188,7 @@
 
     <script>
         // =======================================================================
-        // 1. КОНФИГУРАЦИЯ FIREBASE (ИСПОЛЬЗУЕТСЯ ВАША)
+        // 1. FIREBASE CONFIGURATION (PRESERVED)
         // =======================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyAFnfowA8SHb6URsGIJjTGMLuK2dnYlK3A",
@@ -151,7 +201,7 @@
         };
         
         // =======================================================================
-        // 2. ✅ КОНФИГУРАЦИЯ CLOUDINARY
+        // 2. CLOUDINARY CONFIGURATION (PRESERVED)
         // =======================================================================
         const CLOUDINARY_CONFIG = {
             cloudName: "dv05ksrho", 
@@ -160,27 +210,28 @@
         // =======================================================================
 
         // =======================================================================
-        // 3. 🛡️ КОНФИГУРАЦИЯ АДМИНИСТРАТОРА И ПРАВ УДАЛЕНИЯ
+        // 3. ADMIN CONFIGURATION (PRESERVED)
         // =======================================================================
-        // Email администратора
         const ADMIN_EMAIL = 'ebzeevislam7@gmail.com';
-        // ✅ ВАШ UID АДМИНИСТРАТОРА: Zm0GnCV3iEb7qInxqNZ13lTdABA3
-        const ADMIN_UID = 'Zm0GnCV3iEb7qInxqNZ13lTdABA3'; // <--- ОБНОВЛЕНО
+        const ADMIN_UID = 'Zm0GnCV3iEb7qInxqNZ13lTdABA3'; // YOUR UID
         
         function isAdmin(user) {
             return user && user.uid === ADMIN_UID;
         }
 
         function deleteVideo(docId, title) {
-            // Внимание: alert/confirm запрещены, используем статус-сообщение
+            // Check admin rights locally before attempting delete
+            if (!auth.currentUser || !isAdmin(auth.currentUser)) {
+                uploadStatus.textContent = '❌ У вас нет прав администратора для удаления.';
+                return;
+            }
+
             uploadStatus.textContent = `Попытка удаления видео "${title}"...`;
 
-            // Удаление документа из Firestore
             db.collection("videos").doc(docId).delete()
                 .then(() => {
                     uploadStatus.textContent = `✅ Видео "${title}" успешно удалено из базы данных.`;
-                    // Примечание: Файл останется на Cloudinary, так как полное удаление 
-                    // требует безопасного бэкенд-ключа. Здесь удаляется только ссылка.
+                    // Optional: Clean up comments related to this video (requires a separate query/transaction)
                 })
                 .catch(error => {
                     console.error("Error removing document: ", error);
@@ -190,12 +241,17 @@
         // =======================================================================
 
 
-        // Инициализация Firebase
+        // Initialization
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
         
-        // --- Элементы UI ---
+        // --- Global State ---
+        let currentVideoId = null; 
+        let allVideos = []; // Stores all videos for recommendations and rendering
+        let commentsUnsubscribe = null; // Listener for comments (must be cleaned up)
+
+        // --- UI Elements ---
         const googleLoginBtn = document.getElementById('google-login-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const userInfo = document.getElementById('user-info');
@@ -205,88 +261,357 @@
         const videoGrid = document.getElementById('video-grid');
         const uploadLoader = document.getElementById('upload-loader');
         const loginOptions = document.getElementById('login-options');
+        const mainGridView = document.getElementById('main-grid-view');
+        const watchPageView = document.getElementById('watch-page-view');
+        const videoPlayerContainer = document.getElementById('video-player-container');
+        const videoMetadataSection = document.getElementById('video-metadata-section');
+        const commentsList = document.getElementById('comments-list');
+        const recommendationsList = document.getElementById('recommendations-list');
+        const commentFormContainer = document.getElementById('comment-form-container');
+        const postCommentBtn = document.getElementById('post-comment-btn');
+        const commentTextarea = document.getElementById('comment-text');
+        const commentAuthMessage = document.getElementById('comment-auth-message');
+
+        // --- 4. NAVIGATION / ROUTING ---
+        function showPage(pageName) {
+            if (pageName === 'grid') {
+                mainGridView.classList.remove('hidden');
+                watchPageView.classList.add('hidden');
+                currentVideoId = null;
+                // Clean up old comment listener if exists
+                if (commentsUnsubscribe) {
+                    commentsUnsubscribe();
+                    commentsUnsubscribe = null;
+                }
+            } else if (pageName === 'watch') {
+                mainGridView.classList.add('hidden');
+                watchPageView.classList.remove('hidden');
+            }
+        }
+
+        function navigateToVideo(videoId) {
+            currentVideoId = videoId;
+            showPage('watch');
+            
+            // 1. Get Video Data
+            const videoData = allVideos.find(v => v.id === videoId);
+            if (!videoData) {
+                videoPlayerContainer.innerHTML = `<p class="text-red-400">Видео не найдено.</p>`;
+                return;
+            }
+
+            // 2. Render Player and Metadata (Likes)
+            renderWatchPage(videoData);
+
+            // 3. Setup Comments Listener
+            setupCommentsListener(videoId);
+        }
         
-        const authEmailInput = document.getElementById('auth-email');
-        const authPasswordInput = document.getElementById('auth-password');
-        const emailRegisterBtn = document.getElementById('email-register-btn');
-        const emailLoginBtn = document.getElementById('email-login-btn');
-        const emailAuthStatus = document.getElementById('email-auth-status');
+        // --- 5. RENDER FUNCTIONS ---
 
+        // Renders the main video grid cards
+        function renderVideos(snapshot) {
+            videoGrid.innerHTML = '';
+            allVideos = []; // Reset video list
+            
+            if (snapshot.empty) {
+                videoGrid.innerHTML = '<p class="text-center col-span-full text-gray-400">Видео пока нет. Загрузите первое!</p>';
+                return;
+            }
 
-        // --- 4. АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ ---
+            const isCurrentUserAdmin = auth.currentUser && isAdmin(auth.currentUser);
 
-        // 4.1. Вход через Google
-        googleLoginBtn.addEventListener('click', () => {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(error => {
-                uploadStatus.textContent = `Ошибка входа: ${error.message}`;
+            snapshot.forEach(doc => {
+                const video = doc.data();
+                video.id = doc.id; // Store ID with data
+                allVideos.push(video); // Add to global list
+                
+                const date = video.timestamp ? 
+                             video.timestamp.toDate().toLocaleDateString('ru-RU') : 
+                             '—';
+                const likesCount = Object.keys(video.likes || {}).length;
+
+                const card = document.createElement('div');
+                card.className = 'video-card glass-card p-4 rounded-xl transition transform hover:scale-[1.02] hover:shadow-2xl cursor-pointer'; 
+                card.setAttribute('data-video-id', doc.id);
+                card.onclick = () => navigateToVideo(doc.id);
+
+                card.innerHTML = `
+                    <div class="video-player">
+                        <video class="video-player" src="${video.url}" preload="metadata"></video>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-2 text-white">${video.title}</h3>
+                    <p class="text-sm text-gray-300">Автор: <span class="text-mac-lilac">${video.author || 'Аноним'}</span></p>
+                    <div class="flex justify-between items-center text-xs mt-2">
+                        <p class="text-gray-400">Опубликовано: ${date}</p>
+                        <p class="text-gray-400 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 mr-1 text-red-500">
+                                <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.716 3 7.688 3A5.5 5.5 0 0 1 12 5.059 5.5 5.5 0 0 1 16.313 3c2.973 0 5.439 2.322 5.439 5.25 0 3.924-2.438 7.11-4.75 8.825a25.179 25.179 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.001.001A.752.752 0 0 1 12 21Z" />
+                            </svg>
+                            ${likesCount}
+                        </p>
+                    </div>
+                    ${isCurrentUserAdmin ? 
+                        `<button class="delete-btn mt-3 bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md hover:bg-red-500 transition" 
+                                 data-doc-id="${doc.id}" data-video-title="${video.title}">
+                            Удалить (Админ)
+                        </button>` : ''}
+                `;
+                videoGrid.appendChild(card);
+            });
+            
+            // Re-add delete button handlers after re-rendering the grid
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent opening video when clicking delete
+                    const docId = e.target.getAttribute('data-doc-id');
+                    const title = e.target.getAttribute('data-video-title');
+                    deleteVideo(docId, title);
+                });
+            });
+        }
+
+        // Renders the single video watch page
+        function renderWatchPage(video) {
+            const isCurrentUserAdmin = auth.currentUser && isAdmin(auth.currentUser);
+
+            // 1. Render Player
+            videoPlayerContainer.innerHTML = `
+                <video id="main-video-player" controls class="video-player">
+                    <source src="${video.url}" type="video/mp4">
+                    Ваш браузер не поддерживает видео.
+                </video>
+            `;
+
+            // 2. Render Metadata and Like button
+            const likesCount = Object.keys(video.likes || {}).length;
+            const currentUserId = auth.currentUser ? auth.currentUser.uid : null;
+            const isLiked = currentUserId && video.likes && video.likes[currentUserId];
+            
+            videoMetadataSection.innerHTML = `
+                <h2 class="text-3xl font-bold mb-3">${video.title}</h2>
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-300">
+                        Автор: <span class="text-mac-lilac font-semibold">${video.author || 'Аноним'}</span>
+                    </p>
+                    <div class="flex items-center space-x-4">
+                        <!-- LIKE BUTTON -->
+                        <button id="like-btn" class="flex items-center space-x-1 p-2 rounded-xl transition ${isLiked ? 'bg-red-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}" ${currentUserId ? '' : 'disabled'}>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                                <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.716 3 7.688 3A5.5 5.5 0 0 1 12 5.059 5.5 5.5 0 0 1 16.313 3c2.973 0 5.439 2.322 5.439 5.25 0 3.924-2.438 7.11-4.75 8.825a25.179 25.179 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.001.001A.752.752 0 0 1 12 21Z" />
+                            </svg>
+                            <span id="likes-count">${likesCount}</span>
+                        </button>
+
+                        <!-- ADMIN DELETE BUTTON -->
+                        ${isCurrentUserAdmin ? 
+                            `<button class="delete-btn bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md hover:bg-red-500 transition" 
+                                     data-doc-id="${video.id}" data-video-title="${video.title}" onclick="deleteVideo('${video.id}', '${video.title}')">
+                                Удалить Видео (Админ)
+                            </button>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Add Like listener
+            document.getElementById('like-btn')?.addEventListener('click', () => {
+                if (currentUserId) {
+                    toggleLike(video.id, currentUserId);
+                }
+            });
+
+            // 3. Render Recommendations
+            renderRecommendations(video.id);
+        }
+
+        // Renders the recommendations sidebar
+        function renderRecommendations(excludeId) {
+            recommendationsList.innerHTML = '';
+            
+            const recommendations = allVideos
+                .filter(v => v.id !== excludeId)
+                .sort(() => 0.5 - Math.random()) // Simple shuffle for now
+                .slice(0, 5); // Take top 5
+
+            if (recommendations.length === 0) {
+                recommendationsList.innerHTML = '<p class="text-gray-400">Нет других рекомендаций.</p>';
+                return;
+            }
+
+            recommendations.forEach(video => {
+                const date = video.timestamp ? 
+                             video.timestamp.toDate().toLocaleDateString('ru-RU') : '—';
+                const likesCount = Object.keys(video.likes || {}).length;
+
+                const recItem = document.createElement('div');
+                recItem.className = 'flex space-x-3 glass-card p-3 rounded-xl cursor-pointer hover:bg-white/10 transition';
+                recItem.onclick = () => navigateToVideo(video.id);
+
+                recItem.innerHTML = `
+                    <div class="flex-shrink-0 w-24 h-14 rounded-lg overflow-hidden bg-black">
+                        <video src="${video.url}" preload="metadata" class="w-full h-full object-cover"></video>
+                    </div>
+                    <div class="flex-grow">
+                        <p class="text-sm font-semibold truncate hover:text-mac-lilac">${video.title}</p>
+                        <p class="text-xs text-gray-400">${video.author || 'Аноним'}</p>
+                        <p class="text-xs text-gray-500">${likesCount} лайков</p>
+                    </div>
+                `;
+                recommendationsList.appendChild(recItem);
+            });
+        }
+
+        // --- 6. LIKES LOGIC (Transaction) ---
+        function toggleLike(videoId, userId) {
+            if (!userId) {
+                uploadStatus.textContent = 'Войдите, чтобы ставить лайки!';
+                return;
+            }
+
+            const videoRef = db.collection("videos").doc(videoId);
+            
+            db.runTransaction(transaction => {
+                return transaction.get(videoRef).then(doc => {
+                    if (!doc.exists) {
+                        throw new Error("Video document does not exist!");
+                    }
+                    const likes = doc.data().likes || {};
+                    const isLiked = !!likes[userId];
+
+                    if (isLiked) {
+                        // Unlike: Use Firestore FieldValue.delete() to remove the field
+                        transaction.update(videoRef, { [`likes.${userId}`]: firebase.firestore.FieldValue.delete() });
+                    } else {
+                        // Like: Set the field to true
+                        transaction.update(videoRef, { [`likes.${userId}`]: true });
+                    }
+                });
+            }).then(() => {
+                uploadStatus.textContent = isLiked ? 'Лайк удален.' : 'Лайк поставлен!';
+            }).catch(error => {
+                console.error("Like Transaction Failed:", error);
+                uploadStatus.textContent = `Ошибка при обработке лайка: ${error.message}`;
+            });
+        }
+        
+        // --- 7. COMMENTS LOGIC (Real-time) ---
+        
+        // Event handler for posting a new comment
+        postCommentBtn.addEventListener('click', () => {
+            const user = auth.currentUser;
+            const text = commentTextarea.value.trim();
+
+            if (!user) {
+                uploadStatus.textContent = '❌ Сначала войдите, чтобы комментировать.';
+                return;
+            }
+            if (!text || !currentVideoId) {
+                uploadStatus.textContent = '❌ Введите текст комментария.';
+                return;
+            }
+            
+            const userName = user.displayName || user.email.split('@')[0];
+
+            db.collection("comments").add({
+                videoId: currentVideoId,
+                userId: user.uid,
+                userName: userName,
+                text: text,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                commentTextarea.value = ''; // Clear textarea
+                uploadStatus.textContent = '✅ Комментарий отправлен!';
+            })
+            .catch(error => {
+                console.error("Comment Post Failed:", error);
+                uploadStatus.textContent = `❌ Ошибка комментирования: ${error.message}`;
             });
         });
 
-        // 4.2. Регистрация по Email
-        emailRegisterBtn.addEventListener('click', () => {
-            const email = authEmailInput.value;
-            const password = authPasswordInput.value;
-            emailAuthStatus.textContent = 'Обработка регистрации...';
-            
-            auth.createUserWithEmailAndPassword(email, password)
-                .then(userCredential => {
-                    emailAuthStatus.textContent = `✅ Успешная регистрация! Выполнен вход как: ${userCredential.user.email}`;
-                })
-                .catch(error => {
-                    console.error("Registration Error:", error);
-                    emailAuthStatus.textContent = `❌ Ошибка регистрации: ${error.message}`;
+        // Sets up the real-time listener for comments of the current video
+        function setupCommentsListener(videoId) {
+            // Unsubscribe from previous listener if active
+            if (commentsUnsubscribe) {
+                commentsUnsubscribe();
+            }
+
+            commentsList.innerHTML = '<p class="text-gray-400">Загрузка комментариев...</p>';
+
+            // Subscribe to new listener
+            commentsUnsubscribe = db.collection("comments")
+                .where("videoId", "==", videoId)
+                .orderBy("timestamp", "asc")
+                .onSnapshot(snapshot => {
+                    commentsList.innerHTML = '';
+                    if (snapshot.empty) {
+                        commentsList.innerHTML = '<p class="text-gray-400">Будьте первым, кто оставит комментарий!</p>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const comment = doc.data();
+                        const date = comment.timestamp ? 
+                                     comment.timestamp.toDate().toLocaleString('ru-RU') : '—';
+                        
+                        const commentDiv = document.createElement('div');
+                        commentDiv.className = 'border-t border-white/10 pt-3';
+                        commentDiv.innerHTML = `
+                            <p class="text-sm font-semibold text-mac-lilac">${comment.userName}</p>
+                            <p class="text-base text-white mt-1">${comment.text}</p>
+                            <p class="text-xs text-gray-500">${date}</p>
+                        `;
+                        commentsList.appendChild(commentDiv);
+                    });
+                }, error => {
+                    console.error("Error fetching comments:", error);
+                    commentsList.innerHTML = `<p class="text-red-400">Ошибка загрузки комментариев.</p>`;
                 });
-        });
+        }
 
-        // 4.3. Вход по Email
-        emailLoginBtn.addEventListener('click', () => {
-            const email = authEmailInput.value;
-            const password = authPasswordInput.value;
-            emailAuthStatus.textContent = 'Обработка входа...';
 
-            auth.signInWithEmailAndPassword(email, password)
-                .then(userCredential => {
-                    emailAuthStatus.textContent = `✅ Успешный вход! Добро пожаловать, ${userCredential.user.email}!`;
-                })
-                .catch(error => {
-                    console.error("Login Error:", error);
-                    emailAuthStatus.textContent = `❌ Ошибка входа: ${error.message}`;
-                });
-        });
-
-        // 4.4. Выход
-        logoutBtn.addEventListener('click', () => {
-            auth.signOut();
-        });
-
-        // 4.5. Отслеживание статуса авторизации в реальном времени
+        // --- 8. AUTHENTICATION & UI UPDATES (Refactored) ---
+        
         auth.onAuthStateChanged(user => {
-            if (user) {
-                // Если текущий пользователь - это администратор, выводим его UID в консоль
-                if (user.email === ADMIN_EMAIL && user.uid !== ADMIN_UID) {
-                     console.log("🔴 ВАШ UID АДМИНИСТРАТОРА (скопируйте и замените ADMIN_UID в коде):", user.uid);
-                     userInfo.textContent += ` (⚠️ UID: ${user.uid.substring(0, 8)}...)`;
-                }
-                
-                // Пользователь авторизован
+            const isAuthenticated = !!user;
+
+            if (isAuthenticated) {
                 const displayName = user.displayName ? user.displayName.split(' ')[0] : user.email;
-                userInfo.textContent = `Привет, ${displayName}! ${isAdmin(user) ? '👑 АДМИН' : ''}`; // Показываем статус админа
-                
+                userInfo.textContent = `Привет, ${displayName}! ${isAdmin(user) ? '👑 АДМИН' : ''}`; 
                 logoutBtn.classList.remove('hidden');
                 uploadSection.classList.remove('hidden');
                 loginOptions.classList.add('hidden');
+                
+                commentFormContainer.classList.remove('hidden');
+                postCommentBtn.disabled = false;
+                commentAuthMessage.classList.add('hidden');
+                
+                // Show admin UID in console if admin
+                if (user.email === ADMIN_EMAIL && user.uid !== ADMIN_UID) {
+                     console.log("🔴 ВАШ UID АДМИНИСТРАТОРА:", user.uid);
+                }
+
             } else {
-                // Пользователь не авторизован
                 userInfo.textContent = 'Войдите, чтобы загружать видео.';
                 logoutBtn.classList.add('hidden');
                 uploadSection.classList.add('hidden');
                 loginOptions.classList.remove('hidden');
+                
+                commentFormContainer.classList.remove('hidden'); // Show form, but disable button
+                postCommentBtn.disabled = true;
+                commentAuthMessage.classList.remove('hidden');
+
+            }
+            
+            // Re-render the current view to update like/delete buttons if auth state changes
+            if (currentVideoId) {
+                const videoData = allVideos.find(v => v.id === currentVideoId);
+                if (videoData) renderWatchPage(videoData);
             }
         });
 
 
-        // --- 5. ЗАГРУЗКА ВИДЕО (Cloudinary + Firestore) ---
+        // --- 9. UPLOAD WIDGET SETUP ---
         const uploadWidget = cloudinary.createUploadWidget({
             cloudName: CLOUDINARY_CONFIG.cloudName, 
             uploadPreset: CLOUDINARY_CONFIG.uploadPreset,
@@ -305,13 +630,13 @@
                     return;
                 }
                 
-                // 5.1. Сохранение метаданных в Firestore
                 db.collection("videos").add({
                     title: title,
                     url: result.info.secure_url, 
                     author: user.displayName || user.email,
                     author_uid: user.uid,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    likes: {} // Initialize likes map
                 })
                 .then(() => {
                     uploadStatus.textContent = `✅ Видео "${title}" успешно опубликовано!`;
@@ -342,64 +667,28 @@
         });
 
 
-        // --- 6. ЗАГРУЗКА ГАЛЕРЕИ В РЕАЛЬНОМ ВРЕМЕНИ (onSnapshot) ---
-        function renderVideos(snapshot) {
-            videoGrid.innerHTML = '';
-            
-            if (snapshot.empty) {
-                videoGrid.innerHTML = '<p class="text-center col-span-full text-gray-400">Видео пока нет. Загрузите первое!</p>';
-                return;
-            }
-
-            // Проверка прав администратора перед циклом
-            const isCurrentUserAdmin = auth.currentUser && isAdmin(auth.currentUser);
-
-            snapshot.forEach(doc => {
-                const video = doc.data();
-                const date = video.timestamp ? 
-                             video.timestamp.toDate().toLocaleDateString('ru-RU') : 
-                             '—';
-
-                const card = document.createElement('div');
-                card.className = 'video-card glass-card p-4 rounded-xl transition transform hover:scale-[1.02] hover:shadow-2xl cursor-pointer'; 
-                
-                card.innerHTML = `
-                    <video controls class="w-full">
-                        <source src="${video.url}" type="video/mp4">
-                        Ваш браузер не поддерживает видео.
-                    </video>
-                    <h3 class="text-lg font-semibold mt-2 text-white">${video.title}</h3>
-                    <p class="text-sm text-gray-300">Автор: <span class="text-mac-lilac">${video.author || 'Аноним'}</span></p>
-                    <p class="text-xs text-gray-400">Опубликовано: ${date}</p>
-                    ${isCurrentUserAdmin ? 
-                        `<button class="delete-btn mt-3 bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md hover:bg-red-500 transition" 
-                                 data-doc-id="${doc.id}" data-video-title="${video.title}">
-                            Удалить Видео (Админ)
-                        </button>` : ''}
-                `;
-                videoGrid.appendChild(card);
-            });
-            
-            // 6.1. Добавление обработчиков событий для кнопок удаления
-            document.querySelectorAll('.delete-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const docId = e.target.getAttribute('data-doc-id');
-                    const title = e.target.getAttribute('data-video-title');
-                    deleteVideo(docId, title);
-                });
-            });
-        }
-
-        // Подписываемся на изменения в базе данных (галерея обновляется сама)
-        db.collection("videos").orderBy("timestamp", "desc").limit(15).onSnapshot(
+        // --- 10. REAL-TIME GALLERY LISTENER ---
+        // Attaching the listener to the gallery collection to keep the UI up-to-date
+        db.collection("videos").orderBy("timestamp", "desc").onSnapshot(
             (snapshot) => {
-                renderVideos(snapshot);
+                renderVideos(snapshot); // Re-render main grid
+                
+                // If we are currently watching a video, update its metadata/recommendations
+                if (currentVideoId) {
+                    const latestVideoData = allVideos.find(v => v.id === currentVideoId);
+                    if (latestVideoData) {
+                        renderWatchPage(latestVideoData);
+                    }
+                }
             }, 
             (error) => {
                 console.error("Error fetching videos:", error);
                 videoGrid.innerHTML = `<p class="text-center col-span-full text-red-400">Ошибка подключения к базе данных: ${error.message}</p>`;
             }
         );
+        
+        // --- 11. Initial Load: Make sure the grid is visible first ---
+        showPage('grid');
     </script>
 </body>
 </html>

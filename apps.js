@@ -69,7 +69,6 @@ let currentVideoId = null;
 let allVideos = []; // Stores all videos for recommendations and rendering
 let commentsUnsubscribe = null; // Listener for comments (must be cleaned up)
 let currentLikes = {}; // { videoId: { likeId: { userId, videoId } } } - Store fetched likes
-let currentVideoLikesUnsubscribe = null; // Listener for likes on the currently viewed video
 
 // --- UI Elements ---
 const googleLoginBtn = document.getElementById('google-login-btn');
@@ -96,11 +95,18 @@ const passwordInput = document.getElementById('auth-password');
 const emailAuthStatus = document.getElementById('email-auth-status');
 const emailRegisterBtn = document.getElementById('email-register-btn');
 const emailLoginBtn = document.getElementById('email-login-btn');
+const navbarHomeBtn = document.getElementById('navbar-home-btn');
 
 
 // =======================================================================
 // 4. NAVIGATION / ROUTING
 // =======================================================================
+
+// Добавьте обработчик нажатия на логотип/кнопку "Домой"
+navbarHomeBtn.addEventListener('click', () => {
+    showPage('grid');
+});
+
 function showPage(pageName) {
     if (pageName === 'grid') {
         mainGridView.classList.remove('hidden');
@@ -110,10 +116,6 @@ function showPage(pageName) {
         if (commentsUnsubscribe) {
             commentsUnsubscribe();
             commentsUnsubscribe = null;
-        }
-        if (currentVideoLikesUnsubscribe) {
-            currentVideoLikesUnsubscribe();
-            currentVideoLikesUnsubscribe = null;
         }
     } else if (pageName === 'watch') {
         mainGridView.classList.add('hidden');
@@ -133,7 +135,6 @@ function navigateToVideo(videoId) {
 
     renderWatchPage(videoData);
     setupCommentsListener(videoId);
-    setupLikesListener(videoId); // НОВЫЙ ЛИСЕНЕР ДЛЯ ЛАЙКОВ
 }
 
 // =======================================================================
@@ -143,6 +144,20 @@ function navigateToVideo(videoId) {
 // Renders the main video grid cards 
 function renderVideos(snapshot) {
     videoGrid.innerHTML = '';
+    
+    // Если snapshot - это Promise, то это значит, что функция вызвана из лисенера лайков.
+    // Мы должны дождаться выполнения Promise, чтобы не использовать устаревшие данные.
+    if (snapshot.then) {
+         snapshot.then(querySnapshot => {
+             processSnapshot(querySnapshot);
+         });
+    } else {
+        // Если это обычный snapshot, обрабатываем его сразу
+        processSnapshot(snapshot);
+    }
+}
+
+function processSnapshot(snapshot) {
     allVideos = []; 
     
     if (snapshot.empty) {
@@ -160,7 +175,7 @@ function renderVideos(snapshot) {
         const date = video.timestamp ? 
                      video.timestamp.toDate().toLocaleDateString('ru-RU') : 
                      '—';
-        // Теперь счетчик лайков берется из глобального состояния currentLikes
+        // Лайки берутся из глобального состояния currentLikes
         const likesCount = Object.keys(currentLikes[doc.id] || {}).length; 
 
         const card = document.createElement('div');
@@ -224,7 +239,7 @@ function renderWatchPage(video) {
             <div class="flex items-center space-x-4">
                 <button id="like-btn" class="flex items-center space-x-1 p-2 rounded-xl transition ${isLiked ? 'bg-red-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}" ${currentUserId ? '' : 'disabled'}>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                        <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.716 3 7.688 3A5.5 5.5 0 0 1 12 5.059 5.5 5.5 0 0 1 16.313 3c2.973 0 5.439 2.322 5.439 5.25 0 3.924-2.438 7.11-4.75 8.825a25.179 25.179 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.001.001A.752.752 0 0 1 12 21Z" />
+                        <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.716 3 7.688 3A5.5 5.5 0 0 1 12 5.059 5.5 5.5 0 0 1 16.313 3c2.973 0 5.439 2.322 5.439 5.25 0 3.924-2.438 7.11-4.75 8.825a25.179 25.179 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.001.001A.752.752 0 0 0 12 21Z" />
                     </svg>
                     <span id="likes-count">${likesCount}</span>
                 </button>
@@ -305,20 +320,23 @@ function toggleLike(videoId, userId, existingLikeId) {
             })
             .catch(error => {
                 console.error("Dislike Failed:", error);
+                // Если здесь ошибка, проблема в 'allow delete' в Правилах
                 uploadStatus.textContent = `❌ Ошибка при снятии лайка: ${error.message}`;
             });
     } else {
-        // Лайк: добавляем новый документ
+        // Лайк: добавляем новый документ (создание)
         db.collection("likes").add({
             videoId: videoId,
             userId: userId,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            // Это поле критически важно для Rules
+            timestamp: firebase.firestore.FieldValue.serverTimestamp() 
         })
         .then(() => {
             uploadStatus.textContent = '❤️ Лайк поставлен!';
         })
         .catch(error => {
             console.error("Like Failed:", error);
+            // Если здесь ошибка, проблема в 'allow create' в Правилах
             uploadStatus.textContent = `❌ Ошибка при постановке лайка: ${error.message}`;
         });
     }
@@ -343,15 +361,14 @@ db.collection("likes").onSnapshot(snapshot => {
     
     currentLikes = newLikes;
     
-    // Если мы на главной странице, перерисовываем видео для обновления счетчиков
+    // Перерисовка страницы для обновления счетчиков лайков
     if (!currentVideoId) {
-        // Вызываем рендеринг, используя текущие данные allVideos 
-        // (чтобы избежать повторного запроса к коллекции videos)
-        renderVideos(db.collection("videos").orderBy("timestamp", "desc").get()); 
-    }
-    
-    // Если мы на странице просмотра, вызываем рендеринг страницы
-    if (currentVideoId) {
+        // Запрос к коллекции videos, чтобы получить свежий snapshot
+        db.collection("videos").orderBy("timestamp", "desc").get().then(snapshot => {
+            renderVideos(snapshot); 
+        });
+    } else {
+        // Если мы на странице просмотра, перерисовываем метаданные
         const latestVideoData = allVideos.find(v => v.id === currentVideoId);
         if (latestVideoData) renderWatchPage(latestVideoData);
     }
@@ -595,7 +612,7 @@ document.getElementById('upload-widget').addEventListener('click', () => {
 db.collection("videos").orderBy("timestamp", "desc").onSnapshot(snapshot => {
     // Эта функция будет вызываться только при изменении видео-документов (title, url)
     // Лайки обновляются отдельным лисенером (см. п.6)
-    renderVideos(snapshot); 
+    processSnapshot(snapshot); 
     
 }, error => {
     console.error("Error fetching videos:", error);

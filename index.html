@@ -487,10 +487,11 @@
                     }
                 });
             }).then(() => {
-                uploadStatus.textContent = isLiked ? 'Лайк удален.' : 'Лайк поставлен!';
+                // Status update is less critical here as the main grid listener will update the counts
+                // uploadStatus.textContent = isLiked ? 'Лайк удален.' : 'Лайк поставлен!';
             }).catch(error => {
                 console.error("Like Transaction Failed:", error);
-                uploadStatus.textContent = `Ошибка при обработке лайка: ${error.message}`;
+                uploadStatus.textContent = `❌ Ошибка при обработке лайка: ${error.message}`;
             });
         }
         
@@ -521,7 +522,7 @@
             })
             .then(() => {
                 commentTextarea.value = ''; // Clear textarea
-                uploadStatus.textContent = '✅ Комментарий отправлен!';
+                // uploadStatus.textContent = '✅ Комментарий отправлен!'; // Muted, as success is visual
             })
             .catch(error => {
                 console.error("Comment Post Failed:", error);
@@ -564,8 +565,13 @@
                         commentsList.appendChild(commentDiv);
                     });
                 }, error => {
-                    console.error("Error fetching comments:", error);
-                    commentsList.innerHTML = `<p class="text-red-400">Ошибка загрузки комментариев.</p>`;
+                    // 💥 УЛУЧШЕННАЯ ОБРАБОТКА ОШИБОК ДЛЯ ИНДЕКСА
+                    console.error("FIREBASE ERROR: Comments loading failed. Check console for index URL or permission issues:", error);
+                    commentsList.innerHTML = `<p class="text-red-400">
+                        **Ошибка загрузки комментариев.** Вероятно, отсутствует индекс Firestore. 
+                        Откройте консоль браузера (F12) и найдите там ссылку на создание индекса. 
+                        Она выглядит как 'The query requires an index. You can create it here: [URL]'.
+                    </p>`;
                 });
         }
 
@@ -582,9 +588,8 @@
                 uploadSection.classList.remove('hidden');
                 loginOptions.classList.add('hidden');
                 
-                commentFormContainer.classList.remove('hidden');
+                commentFormContainer.querySelector('#comment-auth-message').classList.add('hidden');
                 postCommentBtn.disabled = false;
-                commentAuthMessage.classList.add('hidden');
                 
                 // Show admin UID in console if admin
                 if (user.email === ADMIN_EMAIL && user.uid !== ADMIN_UID) {
@@ -597,16 +602,14 @@
                 uploadSection.classList.add('hidden');
                 loginOptions.classList.remove('hidden');
                 
-                commentFormContainer.classList.remove('hidden'); // Show form, but disable button
+                commentFormContainer.querySelector('#comment-auth-message').classList.remove('hidden');
                 postCommentBtn.disabled = true;
-                commentAuthMessage.classList.remove('hidden');
-
             }
             
             // Re-render the current view to update like/delete buttons if auth state changes
             if (currentVideoId) {
-                const videoData = allVideos.find(v => v.id === currentVideoId);
-                if (videoData) renderWatchPage(videoData);
+                const latestVideoData = allVideos.find(v => v.id === currentVideoId);
+                if (latestVideoData) renderWatchPage(latestVideoData);
             }
         });
 

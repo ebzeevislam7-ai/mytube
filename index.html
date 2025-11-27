@@ -57,7 +57,7 @@
                 <span class="text-red-500 text-4xl mr-2">▶</span> MyTube <span class="text-mac-lilac text-lg font-light hidden sm:inline">| Cloud Video Platform</span>
             </h1>
             
-            <!-- Блок АВТОРИЗАЦИИ -->
+            <!-- Блок АУТЕНТИФИКАЦИИ -->
             <div id="auth-status" class="w-full lg:w-auto flex flex-col items-end">
                 <div class="flex items-center space-x-3 mb-3 w-full lg:w-auto justify-end">
                     <span id="user-info" class="text-sm font-semibold text-gray-300"></span>
@@ -151,14 +151,44 @@
         };
         
         // =======================================================================
-        // 2. ✅ КОНФИГУРАЦИЯ CLOUDINARY (ОБНОВЛЕНА ВАШИМИ ДАННЫМИ)
-        // Убедитесь, что 'dv05ksrho' используется в Cloudinary как Upload Preset типа 'Unsigned'.
+        // 2. ✅ КОНФИГУРАЦИЯ CLOUDINARY
         // =======================================================================
         const CLOUDINARY_CONFIG = {
             cloudName: "dv05ksrho", 
             uploadPreset: "dv05ksrho" 
         };
         // =======================================================================
+
+        // =======================================================================
+        // 3. 🛡️ КОНФИГУРАЦИЯ АДМИНИСТРАТОРА И ПРАВ УДАЛЕНИЯ
+        // =======================================================================
+        // Email администратора
+        const ADMIN_EMAIL = 'ebzeevislam7@gmail.com';
+        // ✅ ВАШ UID АДМИНИСТРАТОРА: Zm0GnCV3iEb7qInxqNZ13lTdABA3
+        const ADMIN_UID = 'Zm0GnCV3iEb7qInxqNZ13lTdABA3'; // <--- ОБНОВЛЕНО
+        
+        function isAdmin(user) {
+            return user && user.uid === ADMIN_UID;
+        }
+
+        function deleteVideo(docId, title) {
+            // Внимание: alert/confirm запрещены, используем статус-сообщение
+            uploadStatus.textContent = `Попытка удаления видео "${title}"...`;
+
+            // Удаление документа из Firestore
+            db.collection("videos").doc(docId).delete()
+                .then(() => {
+                    uploadStatus.textContent = `✅ Видео "${title}" успешно удалено из базы данных.`;
+                    // Примечание: Файл останется на Cloudinary, так как полное удаление 
+                    // требует безопасного бэкенд-ключа. Здесь удаляется только ссылка.
+                })
+                .catch(error => {
+                    console.error("Error removing document: ", error);
+                    uploadStatus.textContent = `❌ Ошибка при удалении: ${error.message}`;
+                });
+        }
+        // =======================================================================
+
 
         // Инициализация Firebase
         firebase.initializeApp(firebaseConfig);
@@ -174,18 +204,18 @@
         const uploadStatus = document.getElementById('upload-status');
         const videoGrid = document.getElementById('video-grid');
         const uploadLoader = document.getElementById('upload-loader');
-        const loginOptions = document.getElementById('login-options'); // Новый элемент
+        const loginOptions = document.getElementById('login-options');
         
-        const authEmailInput = document.getElementById('auth-email'); // Новый
-        const authPasswordInput = document.getElementById('auth-password'); // Новый
-        const emailRegisterBtn = document.getElementById('email-register-btn'); // Новый
-        const emailLoginBtn = document.getElementById('email-login-btn'); // Новый
-        const emailAuthStatus = document.getElementById('email-auth-status'); // Новый
+        const authEmailInput = document.getElementById('auth-email');
+        const authPasswordInput = document.getElementById('auth-password');
+        const emailRegisterBtn = document.getElementById('email-register-btn');
+        const emailLoginBtn = document.getElementById('email-login-btn');
+        const emailAuthStatus = document.getElementById('email-auth-status');
 
 
-        // --- 3. АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ ---
+        // --- 4. АВТОРИЗАЦИЯ И РЕГИСТРАЦИЯ ---
 
-        // 3.1. Вход через Google
+        // 4.1. Вход через Google
         googleLoginBtn.addEventListener('click', () => {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).catch(error => {
@@ -193,7 +223,7 @@
             });
         });
 
-        // 3.2. Регистрация по Email
+        // 4.2. Регистрация по Email
         emailRegisterBtn.addEventListener('click', () => {
             const email = authEmailInput.value;
             const password = authPasswordInput.value;
@@ -202,8 +232,6 @@
             auth.createUserWithEmailAndPassword(email, password)
                 .then(userCredential => {
                     emailAuthStatus.textContent = `✅ Успешная регистрация! Выполнен вход как: ${userCredential.user.email}`;
-                    // Здесь можно добавить запрос имени пользователя, если нужно.
-                    // Для простоты, пока просто логируем.
                 })
                 .catch(error => {
                     console.error("Registration Error:", error);
@@ -211,7 +239,7 @@
                 });
         });
 
-        // 3.3. Вход по Email
+        // 4.3. Вход по Email
         emailLoginBtn.addEventListener('click', () => {
             const email = authEmailInput.value;
             const password = authPasswordInput.value;
@@ -227,31 +255,38 @@
                 });
         });
 
-        // 3.4. Выход
+        // 4.4. Выход
         logoutBtn.addEventListener('click', () => {
             auth.signOut();
         });
 
-        // 3.5. Отслеживание статуса авторизации в реальном времени
+        // 4.5. Отслеживание статуса авторизации в реальном времени
         auth.onAuthStateChanged(user => {
             if (user) {
+                // Если текущий пользователь - это администратор, выводим его UID в консоль
+                if (user.email === ADMIN_EMAIL && user.uid !== ADMIN_UID) {
+                     console.log("🔴 ВАШ UID АДМИНИСТРАТОРА (скопируйте и замените ADMIN_UID в коде):", user.uid);
+                     userInfo.textContent += ` (⚠️ UID: ${user.uid.substring(0, 8)}...)`;
+                }
+                
                 // Пользователь авторизован
                 const displayName = user.displayName ? user.displayName.split(' ')[0] : user.email;
-                userInfo.textContent = `Привет, ${displayName}!`; 
+                userInfo.textContent = `Привет, ${displayName}! ${isAdmin(user) ? '👑 АДМИН' : ''}`; // Показываем статус админа
+                
                 logoutBtn.classList.remove('hidden');
                 uploadSection.classList.remove('hidden');
-                loginOptions.classList.add('hidden'); // Скрыть форму входа/регистрации
+                loginOptions.classList.add('hidden');
             } else {
                 // Пользователь не авторизован
                 userInfo.textContent = 'Войдите, чтобы загружать видео.';
                 logoutBtn.classList.add('hidden');
                 uploadSection.classList.add('hidden');
-                loginOptions.classList.remove('hidden'); // Показать форму входа/регистрации
+                loginOptions.classList.remove('hidden');
             }
         });
 
 
-        // --- 4. ЗАГРУЗКА ВИДЕО (Cloudinary + Firestore) ---
+        // --- 5. ЗАГРУЗКА ВИДЕО (Cloudinary + Firestore) ---
         const uploadWidget = cloudinary.createUploadWidget({
             cloudName: CLOUDINARY_CONFIG.cloudName, 
             uploadPreset: CLOUDINARY_CONFIG.uploadPreset,
@@ -270,17 +305,17 @@
                     return;
                 }
                 
-                // 4.1. Сохранение метаданных в Firestore
+                // 5.1. Сохранение метаданных в Firestore
                 db.collection("videos").add({
                     title: title,
                     url: result.info.secure_url, 
-                    author: user.displayName || user.email, // Используем email, если нет displayName
+                    author: user.displayName || user.email,
                     author_uid: user.uid,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 })
                 .then(() => {
                     uploadStatus.textContent = `✅ Видео "${title}" успешно опубликовано!`;
-                    videoTitleInput.value = ''; // Очистка поля
+                    videoTitleInput.value = '';
                 })
                 .catch(e => {
                     console.error("Firestore Error:", e);
@@ -307,7 +342,7 @@
         });
 
 
-        // --- 5. ЗАГРУЗКА ГАЛЕРЕИ В РЕАЛЬНОМ ВРЕМЕНИ (onSnapshot) ---
+        // --- 6. ЗАГРУЗКА ГАЛЕРЕИ В РЕАЛЬНОМ ВРЕМЕНИ (onSnapshot) ---
         function renderVideos(snapshot) {
             videoGrid.innerHTML = '';
             
@@ -316,15 +351,18 @@
                 return;
             }
 
+            // Проверка прав администратора перед циклом
+            const isCurrentUserAdmin = auth.currentUser && isAdmin(auth.currentUser);
+
             snapshot.forEach(doc => {
                 const video = doc.data();
-                const card = document.createElement('div');
-                card.className = 'video-card glass-card p-4 rounded-xl transition transform hover:scale-[1.02] hover:shadow-2xl cursor-pointer'; // Добавлен ховер-эффект
-                
                 const date = video.timestamp ? 
                              video.timestamp.toDate().toLocaleDateString('ru-RU') : 
                              '—';
 
+                const card = document.createElement('div');
+                card.className = 'video-card glass-card p-4 rounded-xl transition transform hover:scale-[1.02] hover:shadow-2xl cursor-pointer'; 
+                
                 card.innerHTML = `
                     <video controls class="w-full">
                         <source src="${video.url}" type="video/mp4">
@@ -333,8 +371,22 @@
                     <h3 class="text-lg font-semibold mt-2 text-white">${video.title}</h3>
                     <p class="text-sm text-gray-300">Автор: <span class="text-mac-lilac">${video.author || 'Аноним'}</span></p>
                     <p class="text-xs text-gray-400">Опубликовано: ${date}</p>
+                    ${isCurrentUserAdmin ? 
+                        `<button class="delete-btn mt-3 bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md hover:bg-red-500 transition" 
+                                 data-doc-id="${doc.id}" data-video-title="${video.title}">
+                            Удалить Видео (Админ)
+                        </button>` : ''}
                 `;
                 videoGrid.appendChild(card);
+            });
+            
+            // 6.1. Добавление обработчиков событий для кнопок удаления
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const docId = e.target.getAttribute('data-doc-id');
+                    const title = e.target.getAttribute('data-video-title');
+                    deleteVideo(docId, title);
+                });
             });
         }
 

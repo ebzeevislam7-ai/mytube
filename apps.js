@@ -102,7 +102,9 @@ const App = () => {
     if (!isAuthReady || !db) return; 
 
     // Используем атомарно определенный путь
-    const q = query(collection(db, videosCollectionPath), orderBy('timestamp', 'desc'));
+    // ВРЕМЕННО УБИРАЕМ orderBy('timestamp', 'desc') для проверки ошибки 'permissions',
+    // которая часто маскирует ошибку отсутствия индекса.
+    const q = query(collection(db, videosCollectionPath)); // Изменено
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const videoList = snapshot.docs.map(doc => ({
@@ -136,7 +138,7 @@ const App = () => {
     const q = query(
       collection(db, commentsCollectionPath),
       where('videoId', '==', selectedVideo.id),
-      orderBy('timestamp', 'asc') 
+      orderBy('timestamp', 'asc') // Сортировка комментариев сохранена
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyTube: Онлайн Видеохостинг (YouTube-like Enhanced)</title>
-    <!-- Шрифт Inter для чистоты дизайна -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS CDN для стильного дизайна -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Styling for the Mac-Vibe theme */
@@ -58,13 +56,11 @@
 
     <div class="max-w-6xl mx-auto">
         
-        <!-- HEADER и АУТЕНТИФИКАЦИЯ -->
         <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center py-4 mb-8 glass-card rounded-2xl p-6">
             <h1 id="logo" class="text-3xl font-extrabold text-white mb-4 lg:mb-0 cursor-pointer hover:text-red-400 transition" onclick="showPage('grid')">
                 <span class="text-red-500 text-4xl mr-2">▶</span> MyTube <span class="text-mac-lilac text-lg font-light hidden sm:inline">| Cloud Video Platform</span>
             </h1>
             
-            <!-- Auth Block -->
             <div id="auth-status" class="w-full lg:w-auto flex flex-col items-end">
                 <div class="flex items-center space-x-3 mb-3 w-full lg:w-auto justify-end">
                     <span id="user-info" class="text-sm font-semibold text-gray-300"></span>
@@ -73,7 +69,6 @@
                     </button>
                 </div>
 
-                <!-- Login Options -->
                 <div id="login-options" class="w-full lg:w-auto flex flex-col lg:flex-row space-y-3 lg:space-y-0 lg:space-x-3 hidden">
                     <button id="google-login-btn" class="btn-lilac text-white font-medium py-2 px-4 rounded-xl shadow-lg transition transform hover:scale-105 w-full lg:w-auto">
                         Войти через Google
@@ -98,10 +93,8 @@
             </div>
         </header>
         
-        <!-- MAIN GRID VIEW (Главная страница) -->
         <div id="main-grid-view">
-             <!-- UPLOAD SECTION -->
-            <section id="upload-section" class="mb-10 glass-card rounded-2xl p-6 hidden">
+              <section id="upload-section" class="mb-10 glass-card rounded-2xl p-6 hidden">
                 <h2 class="text-2xl font-semibold mb-4 text-mac-lilac">Загрузить видео</h2>
                 <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
                     <input type="text" id="video-title" placeholder="Введите заголовок видео (обязательно)" 
@@ -117,7 +110,6 @@
                 </div>
             </section>
 
-            <!-- VIDEO GALLERY -->
             <section>
                 <h2 class="text-2xl font-bold mb-6 text-white">Последние публикации</h2>
                 <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -126,27 +118,20 @@
             </section>
         </div>
         
-        <!-- WATCH PAGE VIEW (Страница просмотра видео) -->
         <div id="watch-page-view" class="hidden">
             <div class="flex flex-col lg:flex-row gap-6">
-                <!-- Main Content (Video Player and Comments) -->
                 <div class="lg:w-2/3">
                     <div id="video-player-container" class="glass-card p-4 rounded-2xl mb-6">
-                        <!-- Dynamic Player Content Goes Here -->
-                    </div>
+                        </div>
                     
-                    <!-- LIKE/COMMENT SECTION -->
                     <div id="video-metadata-section" class="mb-6">
-                        <!-- Dynamic Metadata (Likes, Title) Goes Here -->
-                    </div>
+                        </div>
 
-                    <!-- COMMENTS SECTION -->
                     <div class="glass-card p-4 rounded-2xl">
                         <h3 class="text-xl font-semibold mb-4 text-mac-lilac">Комментарии</h3>
                         
-                        <!-- Comment Form -->
-                        <div id="comment-form-container" class="mb-6 hidden">
-                             <p id="comment-auth-message" class="text-sm text-yellow-300 mb-2">Войдите, чтобы оставить комментарий.</p>
+                        <div id="comment-form-container" class="mb-6">
+                            <p id="comment-auth-message" class="text-sm text-yellow-300 mb-2">Войдите, чтобы оставить комментарий.</p>
                             <textarea id="comment-text" rows="3" placeholder="Оставить комментарий..."
                                 class="w-full p-3 bg-white/10 text-white placeholder-gray-300 border border-white/10 rounded-lg focus:ring-2 focus:ring-mac-lilac focus:outline-none"></textarea>
                             <button id="post-comment-btn" class="btn-lilac text-white font-medium py-2 px-4 rounded-xl mt-2 disabled:opacity-50" disabled>
@@ -154,41 +139,34 @@
                             </button>
                         </div>
                         
-                        <!-- Comments List -->
                         <div id="comments-list" class="space-y-4">
-                            <!-- Dynamic Comments Go Here -->
-                        </div>
+                            </div>
                     </div>
                 </div>
 
-                <!-- Recommendations Sidebar -->
                 <div class="lg:w-1/3">
                     <h3 class="text-xl font-semibold mb-4 text-white">Рекомендации</h3>
                     <div id="recommendations-list" class="space-y-3">
                         <p class="text-gray-400">Загрузка рекомендаций...</p>
-                        <!-- Dynamic Recommended Videos Go Here -->
-                    </div>
+                        </div>
                 </div>
             </div>
         </div>
 
-        <!-- FOOTER -->
         <footer class="mt-16 text-center text-gray-400 text-sm">
             <p>&copy; 2025 MyTube Project | Хостинг на базе Cloudinary & Firebase</p>
         </footer>
         
     </div>
 
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-    <!-- Cloudinary Widget -->
     <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
 
     <script>
         // =======================================================================
-        // 1. FIREBASE CONFIGURATION (PRESERVED)
+        // 1. FIREBASE CONFIGURATION (ВАШИ КЛЮЧИ)
         // =======================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyAFnfowA8SHb6URsGIJjTGMLuK2dnYlK3A",
@@ -201,7 +179,7 @@
         };
         
         // =======================================================================
-        // 2. CLOUDINARY CONFIGURATION (PRESERVED)
+        // 2. CLOUDINARY CONFIGURATION (ВАШИ КЛЮЧИ)
         // =======================================================================
         const CLOUDINARY_CONFIG = {
             cloudName: "dv05ksrho", 
@@ -210,32 +188,40 @@
         // =======================================================================
 
         // =======================================================================
-        // 3. ADMIN CONFIGURATION (PRESERVED)
+        // 3. ADMIN CONFIGURATION
         // =======================================================================
         const ADMIN_EMAIL = 'ebzeevislam7@gmail.com';
-        const ADMIN_UID = 'Zm0GnCV3iEb7qInxqNZ13lTdABA3'; // YOUR UID
+        const ADMIN_UID = 'Zm0GnCV3iEb7qInxqNZ13lTdABA3'; // ВАШ UID АДМИНА
         
         function isAdmin(user) {
             return user && user.uid === ADMIN_UID;
         }
 
+        // Функция удаления (доступна только из консоли для админа)
         function deleteVideo(docId, title) {
-            // Check admin rights locally before attempting delete
             if (!auth.currentUser || !isAdmin(auth.currentUser)) {
                 uploadStatus.textContent = '❌ У вас нет прав администратора для удаления.';
                 return;
             }
 
+            if (!confirm(`Вы уверены, что хотите удалить видео "${title}"? Это действие необратимо!`)) {
+                return;
+            }
+
             uploadStatus.textContent = `Попытка удаления видео "${title}"...`;
+            uploadLoader.classList.remove('hidden');
 
             db.collection("videos").doc(docId).delete()
                 .then(() => {
-                    uploadStatus.textContent = `✅ Видео "${title}" успешно удалено из базы данных.`;
-                    // Optional: Clean up comments related to this video (requires a separate query/transaction)
+                    uploadStatus.textContent = `✅ Видео "${title}" успешно удалено.`;
+                    // ВАЖНО: Видео из Cloudinary и комментарии из Firestore нужно удалять вручную или через Cloud Functions.
                 })
                 .catch(error => {
                     console.error("Error removing document: ", error);
                     uploadStatus.textContent = `❌ Ошибка при удалении: ${error.message}`;
+                })
+                .finally(() => {
+                    uploadLoader.classList.add('hidden');
                 });
         }
         // =======================================================================
@@ -271,14 +257,22 @@
         const postCommentBtn = document.getElementById('post-comment-btn');
         const commentTextarea = document.getElementById('comment-text');
         const commentAuthMessage = document.getElementById('comment-auth-message');
+        const emailInput = document.getElementById('auth-email');
+        const passwordInput = document.getElementById('auth-password');
+        const emailAuthStatus = document.getElementById('email-auth-status');
+        const emailRegisterBtn = document.getElementById('email-register-btn');
+        const emailLoginBtn = document.getElementById('email-login-btn');
 
-        // --- 4. NAVIGATION / ROUTING ---
+
+        // =======================================================================
+        // 4. NAVIGATION / ROUTING
+        // =======================================================================
         function showPage(pageName) {
             if (pageName === 'grid') {
                 mainGridView.classList.remove('hidden');
                 watchPageView.classList.add('hidden');
                 currentVideoId = null;
-                // Clean up old comment listener if exists
+                // Clean up old comment listener
                 if (commentsUnsubscribe) {
                     commentsUnsubscribe();
                     commentsUnsubscribe = null;
@@ -293,26 +287,24 @@
             currentVideoId = videoId;
             showPage('watch');
             
-            // 1. Get Video Data
             const videoData = allVideos.find(v => v.id === videoId);
             if (!videoData) {
-                videoPlayerContainer.innerHTML = `<p class="text-red-400">Видео не найдено.</p>`;
+                videoPlayerContainer.innerHTML = `<p class="text-red-400">Видео не найдено. Вернитесь на главную.</p>`;
                 return;
             }
 
-            // 2. Render Player and Metadata (Likes)
             renderWatchPage(videoData);
-
-            // 3. Setup Comments Listener
             setupCommentsListener(videoId);
         }
         
-        // --- 5. RENDER FUNCTIONS ---
+        // =======================================================================
+        // 5. RENDER FUNCTIONS
+        // =======================================================================
 
-        // Renders the main video grid cards
+        // Renders the main video grid cards (Subscribed via Firestore snapshot)
         function renderVideos(snapshot) {
             videoGrid.innerHTML = '';
-            allVideos = []; // Reset video list
+            allVideos = []; 
             
             if (snapshot.empty) {
                 videoGrid.innerHTML = '<p class="text-center col-span-full text-gray-400">Видео пока нет. Загрузите первое!</p>';
@@ -323,8 +315,8 @@
 
             snapshot.forEach(doc => {
                 const video = doc.data();
-                video.id = doc.id; // Store ID with data
-                allVideos.push(video); // Add to global list
+                video.id = doc.id; 
+                allVideos.push(video); 
                 
                 const date = video.timestamp ? 
                              video.timestamp.toDate().toLocaleDateString('ru-RU') : 
@@ -353,21 +345,11 @@
                     </div>
                     ${isCurrentUserAdmin ? 
                         `<button class="delete-btn mt-3 bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md hover:bg-red-500 transition" 
-                                 data-doc-id="${doc.id}" data-video-title="${video.title}">
+                                     data-doc-id="${doc.id}" data-video-title="${video.title}" onclick="deleteVideo('${doc.id}', '${video.title}')">
                             Удалить (Админ)
                         </button>` : ''}
                 `;
                 videoGrid.appendChild(card);
-            });
-            
-            // Re-add delete button handlers after re-rendering the grid
-            document.querySelectorAll('.delete-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent opening video when clicking delete
-                    const docId = e.target.getAttribute('data-doc-id');
-                    const title = e.target.getAttribute('data-video-title');
-                    deleteVideo(docId, title);
-                });
             });
         }
 
@@ -395,7 +377,6 @@
                         Автор: <span class="text-mac-lilac font-semibold">${video.author || 'Аноним'}</span>
                     </p>
                     <div class="flex items-center space-x-4">
-                        <!-- LIKE BUTTON -->
                         <button id="like-btn" class="flex items-center space-x-1 p-2 rounded-xl transition ${isLiked ? 'bg-red-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}" ${currentUserId ? '' : 'disabled'}>
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
                                 <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.716 3 7.688 3A5.5 5.5 0 0 1 12 5.059 5.5 5.5 0 0 1 16.313 3c2.973 0 5.439 2.322 5.439 5.25 0 3.924-2.438 7.11-4.75 8.825a25.179 25.179 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.001.001A.752.752 0 0 1 12 21Z" />
@@ -403,10 +384,9 @@
                             <span id="likes-count">${likesCount}</span>
                         </button>
 
-                        <!-- ADMIN DELETE BUTTON -->
                         ${isCurrentUserAdmin ? 
                             `<button class="delete-btn bg-red-600 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md hover:bg-red-500 transition" 
-                                     data-doc-id="${video.id}" data-video-title="${video.title}" onclick="deleteVideo('${video.id}', '${video.title}')">
+                                         data-doc-id="${video.id}" data-video-title="${video.title}" onclick="deleteVideo('${video.id}', '${video.title}')">
                                 Удалить Видео (Админ)
                             </button>` : ''}
                     </div>
@@ -430,8 +410,8 @@
             
             const recommendations = allVideos
                 .filter(v => v.id !== excludeId)
-                .sort(() => 0.5 - Math.random()) // Simple shuffle for now
-                .slice(0, 5); // Take top 5
+                .sort(() => 0.5 - Math.random()) 
+                .slice(0, 5); 
 
             if (recommendations.length === 0) {
                 recommendationsList.innerHTML = '<p class="text-gray-400">Нет других рекомендаций.</p>';
@@ -461,53 +441,94 @@
             });
         }
 
-        // --- 6. LIKES LOGIC (Transaction) ---
+        // =======================================================================
+        // 6. LIKES LOGIC (Transaction)
+        // =======================================================================
         function toggleLike(videoId, userId) {
-            if (!userId) {
-                uploadStatus.textContent = 'Войдите, чтобы ставить лайки!';
-                return;
-            }
+            if (!userId) return;
 
             const videoRef = db.collection("videos").doc(videoId);
             
+            // Используем Transaction для безопасного обновления лайков
             db.runTransaction(transaction => {
                 return transaction.get(videoRef).then(doc => {
-                    if (!doc.exists) {
-                        throw new Error("Video document does not exist!");
-                    }
+                    if (!doc.exists) throw new Error("Video document does not exist!");
+                    
                     const likes = doc.data().likes || {};
                     const isLiked = !!likes[userId];
 
                     if (isLiked) {
-                        // Unlike: Use Firestore FieldValue.delete() to remove the field
+                        // Unlike
                         transaction.update(videoRef, { [`likes.${userId}`]: firebase.firestore.FieldValue.delete() });
                     } else {
-                        // Like: Set the field to true
+                        // Like
                         transaction.update(videoRef, { [`likes.${userId}`]: true });
                     }
                 });
-            }).then(() => {
-                // Status update is less critical here as the main grid listener will update the counts
-                // uploadStatus.textContent = isLiked ? 'Лайк удален.' : 'Лайк поставлен!';
             }).catch(error => {
                 console.error("Like Transaction Failed:", error);
                 uploadStatus.textContent = `❌ Ошибка при обработке лайка: ${error.message}`;
             });
         }
         
-        // --- 7. COMMENTS LOGIC (Real-time) ---
+        // =======================================================================
+        // 7. COMMENTS LOGIC (Real-time)
+        // =======================================================================
         
+        // Sets up the real-time listener for comments of the current video
+        function setupCommentsListener(videoId) {
+            if (commentsUnsubscribe) {
+                commentsUnsubscribe();
+            }
+
+            commentsList.innerHTML = '<p class="text-gray-400">Загрузка комментариев...</p>';
+
+            // Subscribe to new listener
+            // ВАЖНО: Этот запрос требует составного индекса в Firestore (videoId, timestamp)
+            commentsUnsubscribe = db.collection("comments")
+                .where("videoId", "==", videoId)
+                .orderBy("timestamp", "asc")
+                .onSnapshot(snapshot => {
+                    commentsList.innerHTML = '';
+                    if (snapshot.empty) {
+                        commentsList.innerHTML = '<p class="text-gray-400">Будьте первым, кто оставит комментарий!</p>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const comment = doc.data();
+                        const date = comment.timestamp ? 
+                                         comment.timestamp.toDate().toLocaleString('ru-RU') : '—';
+                        
+                        const commentDiv = document.createElement('div');
+                        commentDiv.className = 'border-t border-white/10 pt-3';
+                        commentDiv.innerHTML = `
+                            <p class="text-sm font-semibold text-mac-lilac">${comment.userName}</p>
+                            <p class="text-base text-white mt-1">${comment.text}</p>
+                            <p class="text-xs text-gray-500">${date}</p>
+                        `;
+                        commentsList.appendChild(commentDiv);
+                    });
+                }, error => {
+                    console.error("FIREBASE ERROR: Comments loading failed.", error);
+                    commentsList.innerHTML = `<p class="text-red-400">
+                        **Ошибка загрузки комментариев.** Проверьте консоль браузера (F12) на наличие ссылки для создания индекса Firestore.
+                    </p>`;
+                });
+        }
+
+
         // Event handler for posting a new comment
         postCommentBtn.addEventListener('click', () => {
             const user = auth.currentUser;
             const text = commentTextarea.value.trim();
 
             if (!user) {
-                uploadStatus.textContent = '❌ Сначала войдите, чтобы комментировать.';
+                alert('Сначала войдите, чтобы комментировать.');
                 return;
             }
             if (!text || !currentVideoId) {
-                uploadStatus.textContent = '❌ Введите текст комментария.';
+                alert('Введите текст комментария.');
                 return;
             }
             
@@ -522,7 +543,8 @@
             })
             .then(() => {
                 commentTextarea.value = ''; // Clear textarea
-                // uploadStatus.textContent = '✅ Комментарий отправлен!'; // Muted, as success is visual
+                uploadStatus.textContent = '✅ Комментарий отправлен!';
+                setTimeout(() => uploadStatus.textContent = '', 3000); // Clear after 3 seconds
             })
             .catch(error => {
                 console.error("Comment Post Failed:", error);
@@ -530,83 +552,82 @@
             });
         });
 
-        // Sets up the real-time listener for comments of the current video
-        function setupCommentsListener(videoId) {
-            // Unsubscribe from previous listener if active
-            if (commentsUnsubscribe) {
-                commentsUnsubscribe();
+        // =======================================================================
+        // 8. AUTHENTICATION (Handled by Firebase Auth)
+        // =======================================================================
+
+        // Google Login
+        googleLoginBtn.addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(error => {
+                emailAuthStatus.textContent = `❌ Ошибка входа через Google: ${error.message}`;
+            });
+        });
+
+        // Email Registration
+        emailRegisterBtn.addEventListener('click', () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            if (!email || password.length < 6) {
+                emailAuthStatus.textContent = '❌ Неверный Email или пароль (мин 6 символов).';
+                return;
             }
-
-            commentsList.innerHTML = '<p class="text-gray-400">Загрузка комментариев...</p>';
-
-            // Subscribe to new listener
-            commentsUnsubscribe = db.collection("comments")
-                .where("videoId", "==", videoId)
-                .orderBy("timestamp", "asc")
-                .onSnapshot(snapshot => {
-                    commentsList.innerHTML = '';
-                    if (snapshot.empty) {
-                        commentsList.innerHTML = '<p class="text-gray-400">Будьте первым, кто оставит комментарий!</p>';
-                        return;
-                    }
-                    
-                    snapshot.forEach(doc => {
-                        const comment = doc.data();
-                        const date = comment.timestamp ? 
-                                     comment.timestamp.toDate().toLocaleString('ru-RU') : '—';
-                        
-                        const commentDiv = document.createElement('div');
-                        commentDiv.className = 'border-t border-white/10 pt-3';
-                        commentDiv.innerHTML = `
-                            <p class="text-sm font-semibold text-mac-lilac">${comment.userName}</p>
-                            <p class="text-base text-white mt-1">${comment.text}</p>
-                            <p class="text-xs text-gray-500">${date}</p>
-                        `;
-                        commentsList.appendChild(commentDiv);
-                    });
-                }, error => {
-                    // 💥 УЛУЧШЕННАЯ ОБРАБОТКА ОШИБОК ДЛЯ ИНДЕКСА
-                    console.error("FIREBASE ERROR: Comments loading failed. Check console for index URL or permission issues:", error);
-                    commentsList.innerHTML = `<p class="text-red-400">
-                        **Ошибка загрузки комментариев.** Вероятно, отсутствует индекс Firestore. 
-                        Откройте консоль браузера (F12) и найдите там ссылку на создание индекса. 
-                        Она выглядит как 'The query requires an index. You can create it here: [URL]'.
-                    </p>`;
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(() => {
+                    emailAuthStatus.textContent = '✅ Регистрация успешна! Выполнен вход.';
+                })
+                .catch(error => {
+                    emailAuthStatus.textContent = `❌ Ошибка регистрации: ${error.message}`;
                 });
-        }
+        });
 
+        // Email Login
+        emailLoginBtn.addEventListener('click', () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    emailAuthStatus.textContent = '✅ Вход успешен!';
+                })
+                .catch(error => {
+                    emailAuthStatus.textContent = `❌ Ошибка входа: ${error.message}`;
+                });
+        });
 
-        // --- 8. AUTHENTICATION & UI UPDATES (Refactored) ---
-        
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            auth.signOut();
+            uploadStatus.textContent = 'Вы вышли из аккаунта.';
+            setTimeout(() => uploadStatus.textContent = '', 3000);
+        });
+
+        // Auth State Change Listener (The main UI Updater)
         auth.onAuthStateChanged(user => {
             const isAuthenticated = !!user;
 
             if (isAuthenticated) {
-                const displayName = user.displayName ? user.displayName.split(' ')[0] : user.email;
+                const displayName = user.displayName ? user.displayName.split(' ')[0] : user.email.split('@')[0];
                 userInfo.textContent = `Привет, ${displayName}! ${isAdmin(user) ? '👑 АДМИН' : ''}`; 
                 logoutBtn.classList.remove('hidden');
                 uploadSection.classList.remove('hidden');
                 loginOptions.classList.add('hidden');
                 
-                commentFormContainer.querySelector('#comment-auth-message').classList.add('hidden');
+                // Comment form state
+                commentAuthMessage.classList.add('hidden');
                 postCommentBtn.disabled = false;
                 
-                // Show admin UID in console if admin
-                if (user.email === ADMIN_EMAIL && user.uid !== ADMIN_UID) {
-                     console.log("🔴 ВАШ UID АДМИНИСТРАТОРА:", user.uid);
-                }
-
             } else {
                 userInfo.textContent = 'Войдите, чтобы загружать видео.';
                 logoutBtn.classList.add('hidden');
                 uploadSection.classList.add('hidden');
                 loginOptions.classList.remove('hidden');
                 
-                commentFormContainer.querySelector('#comment-auth-message').classList.remove('hidden');
+                // Comment form state
+                commentAuthMessage.classList.remove('hidden');
                 postCommentBtn.disabled = true;
             }
             
-            // Re-render the current view to update like/delete buttons if auth state changes
+            // Re-render the watch page to update like/delete buttons if auth state changes
             if (currentVideoId) {
                 const latestVideoData = allVideos.find(v => v.id === currentVideoId);
                 if (latestVideoData) renderWatchPage(latestVideoData);
@@ -614,7 +635,9 @@
         });
 
 
-        // --- 9. UPLOAD WIDGET SETUP ---
+        // =======================================================================
+        // 9. UPLOAD WIDGET SETUP
+        // =======================================================================
         const uploadWidget = cloudinary.createUploadWidget({
             cloudName: CLOUDINARY_CONFIG.cloudName, 
             uploadPreset: CLOUDINARY_CONFIG.uploadPreset,
@@ -633,65 +656,71 @@
                     return;
                 }
                 
+                // Сохраняем метаданные в Firestore
                 db.collection("videos").add({
                     title: title,
-                    url: result.info.secure_url, 
-                    author: user.displayName || user.email,
-                    author_uid: user.uid,
+                    url: result.info.secure_url,
+                    author: user.displayName || user.email.split('@')[0],
+                    authorUid: user.uid,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    likes: {} // Initialize likes map
+                    likes: {} // Инициализируем пустой map для лайков
                 })
                 .then(() => {
                     uploadStatus.textContent = `✅ Видео "${title}" успешно опубликовано!`;
-                    videoTitleInput.value = '';
+                    videoTitleInput.value = ''; // Clear input
                 })
                 .catch(e => {
-                    console.error("Firestore Error:", e);
-                    uploadStatus.textContent = `❌ Ошибка БД: ${e.message}`;
+                    uploadStatus.textContent = `❌ Ошибка записи в базу: ${e.message}`;
+                    console.error("Database write error:", e);
                 });
+
+            } else if (result && result.event === "abort") {
+                uploadStatus.textContent = 'Загрузка отменена пользователем.';
             } else if (error) {
-                 uploadStatus.textContent = `❌ Ошибка загрузки: ${error.message}`;
+                uploadStatus.textContent = `❌ Ошибка загрузки Cloudinary: ${error.message}`;
             }
         });
 
-        document.getElementById("upload-widget").addEventListener("click", function(){
+        document.getElementById('upload-widget').addEventListener('click', () => {
             if (!auth.currentUser) {
-                uploadStatus.textContent = "Пожалуйста, войдите, чтобы начать загрузку!";
+                uploadStatus.textContent = '❌ Войдите, чтобы загружать видео.';
                 return;
             }
-            if (!videoTitleInput.value.trim()) {
-                uploadStatus.textContent = "Введите заголовок перед загрузкой.";
+            
+            const title = videoTitleInput.value.trim();
+            if (!title) {
+                uploadStatus.textContent = '❌ Введите заголовок видео перед выбором файла!';
+                videoTitleInput.focus();
                 return;
             }
-
-            uploadStatus.textContent = 'Открытие окна загрузки. Не закрывайте его!';
+            
+            uploadStatus.textContent = 'Открытие виджета загрузки...';
             uploadLoader.classList.remove('hidden');
+
             uploadWidget.open();
         });
 
 
-        // --- 10. REAL-TIME GALLERY LISTENER ---
-        // Attaching the listener to the gallery collection to keep the UI up-to-date
-        db.collection("videos").orderBy("timestamp", "desc").onSnapshot(
-            (snapshot) => {
-                renderVideos(snapshot); // Re-render main grid
-                
-                // If we are currently watching a video, update its metadata/recommendations
-                if (currentVideoId) {
-                    const latestVideoData = allVideos.find(v => v.id === currentVideoId);
-                    if (latestVideoData) {
-                        renderWatchPage(latestVideoData);
-                    }
-                }
-            }, 
-            (error) => {
-                console.error("Error fetching videos:", error);
-                videoGrid.innerHTML = `<p class="text-center col-span-full text-red-400">Ошибка подключения к базе данных: ${error.message}</p>`;
+        // =======================================================================
+        // 10. INITIAL DATA LOAD (Real-time listener for the main grid)
+        // =======================================================================
+        // Подписываемся на ВСЕ видео, отсортированные по времени создания (новые сверху)
+        db.collection("videos").orderBy("timestamp", "desc").onSnapshot(snapshot => {
+            // Эта функция будет вызываться каждый раз, когда данные изменяются (добавление, удаление, лайк)
+            renderVideos(snapshot);
+
+            // Если пользователь находится на странице просмотра, перерисовываем метаданные, 
+            // чтобы обновить счетчик лайков
+            if (currentVideoId) {
+                 const latestVideoData = allVideos.find(v => v.id === currentVideoId);
+                 if (latestVideoData) renderWatchPage(latestVideoData);
             }
-        );
-        
-        // --- 11. Initial Load: Make sure the grid is visible first ---
-        showPage('grid');
+            
+        }, error => {
+            console.error("Error fetching videos:", error);
+            videoGrid.innerHTML = '<p class="text-center col-span-full text-red-400">Не удалось загрузить видео. Проверьте подключение к Firestore.</p>';
+        });
+
     </script>
 </body>
 </html>

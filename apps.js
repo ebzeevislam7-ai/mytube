@@ -39,8 +39,8 @@ const App = () => {
   const [loadingComments, setLoadingComments] = useState(false);
   
   // --- Атомарное определение путей к коллекциям ---
-  const videosCollectionPath = useMemo(() => `artifacts/${appId}/public/data/videos`, []);
-  const commentsCollectionPath = useMemo(() => `artifacts/${appId}/public/data/comments`, []);
+  const videosCollectionPath = useMemo(() => `artifacts/${appId}/public/data/videos`, [appId]);
+  const commentsCollectionPath = useMemo(() => `artifacts/${appId}/public/data/comments`, [appId]);
 
   // --- Sign Out Function ---
   const handleSignOut = useCallback(async () => {
@@ -101,10 +101,11 @@ const App = () => {
     // Усиленный GUARD: Только запрос Firestore после готовности аутентификации и наличия db
     if (!isAuthReady || !db) return; 
 
-    // Используем атомарно определенный путь
-    // ВРЕМЕННО УБИРАЕМ orderBy('timestamp', 'desc') для проверки ошибки 'permissions',
-    // которая часто маскирует ошибку отсутствия индекса.
-    const q = query(collection(db, videosCollectionPath)); // Изменено
+    // Добавляем логирование пути для отладки
+    console.log('Querying videos from path (videosCollectionPath):', videosCollectionPath);
+
+    // Возвращаем orderBy, но с улучшенной обработкой ошибок
+    const q = query(collection(db, videosCollectionPath), orderBy('timestamp', 'desc')); 
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const videoList = snapshot.docs.map(doc => ({
@@ -114,16 +115,59 @@ const App = () => {
         // Filter out false/null likes when counting
         likeCount: Object.values(doc.data().likes || {}).filter(val => val).length
       }));
+      
+      // Сортируем в памяти, если сортировка по времени не сработала из-за индекса
+      videoList.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+      
       setVideos(videoList);
       if (!selectedVideo && videoList.length > 0) {
         setSelectedVideo(videoList[0]);
       }
     }, (error) => {
       console.error("Error fetching videos:", error); 
+      
+      // Улучшенная диагностика ошибки
+      if (error.code === 'permission-denied') {
+        const message = error.message || '';
+        if (message.includes('The query requires an index') || message.includes('at')) {
+            console.error("!!! ОШИБКА ИНДЕКСАЦИИ (PERMISSION-DENIED/INDEX) !!!");
+            console.error("Firestore требует индекс для сортировки или комбинированного запроса.");
+            console.error("Поскольку вы не можете создавать индексы, данные были получены без сортировки (если это возможно) и отсортированы в JavaScript.");
+        } else {
+            console.error("!!! ОШИБКА РАЗРЕШЕНИЙ (PERMISSION-DENIED) !!!");
+            console.error(`Проверьте Правила безопасности Firestore. Убедитесь, что для пути ${videosCollectionPath} разрешено чтение.`);
+            console.error("Убедитесь, что в коллекции есть хотя бы один документ.");
+        }
+      } else {
+         console.error("Неизвестная ошибка Firestore:", error);
+      }
+      
+      // В случае ошибки (из-за отсутствия индекса или разрешений)
+      // мы запускаем запрос БЕЗ сортировки, чтобы убедиться, что дело не в ней
+      if (error.code === 'permission-denied' && videos.length === 0) {
+          console.warn("Попытка загрузить видео без сортировки из-за ошибки разрешений/индекса...");
+          const fallbackQ = query(collection(db, videosCollectionPath));
+          onSnapshot(fallbackQ, (snapshot) => {
+              const videoList = snapshot.docs.map(doc => ({
+                  id: doc.id,
+                  ...doc.data(),
+                  likes: doc.data().likes || {},
+                  likeCount: Object.values(doc.data().likes || {}).filter(val => val).length
+              }));
+              // Сортировка в памяти как запасной вариант
+              videoList.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+              setVideos(videoList);
+              if (!selectedVideo && videoList.length > 0) {
+                  setSelectedVideo(videoList[0]);
+              }
+          }, (fallbackError) => {
+              console.error("Запасной запрос также завершился ошибкой:", fallbackError);
+          });
+      }
     });
 
     return () => unsubscribe();
-  }, [isAuthReady, db, selectedVideo]); // Добавлена зависимость db
+  }, [isAuthReady, db, selectedVideo, videosCollectionPath]); // Добавлена зависимость videosCollectionPath
 
   // --- Load Comments for Selected Video (Real-time) ---
   useEffect(() => {
@@ -157,7 +201,7 @@ const App = () => {
     });
 
     return () => unsubscribe();
-  }, [isAuthReady, db, selectedVideo?.id]); // Добавлена зависимость db
+  }, [isAuthReady, db, selectedVideo?.id, commentsCollectionPath]);
 
 
   // --- Like/Unlike Function (Optimized for speed) ---

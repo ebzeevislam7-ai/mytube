@@ -1,28 +1,28 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
-  getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged 
+  getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut 
 } from 'firebase/auth';
 import { 
   getFirestore, collection, query, where, orderBy, onSnapshot, 
   doc, updateDoc, addDoc, serverTimestamp, setLogLevel 
 } from 'firebase/firestore';
-import { Heart, MessageSquare, Send, User } from 'lucide-react';
+import { Heart, MessageSquare, Send, User, LogOut } from 'lucide-react'; 
 
-// Установка уровня логирования Firebase (помогает при отладке)
+// Setting Firebase log level for debugging purposes
 setLogLevel('debug');
 
-// Глобальные переменные, предоставляемые средой Canvas
+// Global variables provided by the Canvas environment
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-// Инициализация Firebase (выполняется один раз)
+// Firebase initialization (executed once)
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Основной компонент приложения
+// Main Application Component
 const App = () => {
   const [videos, setVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -33,22 +33,39 @@ const App = () => {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
   
-  // --- Инициализация Аутентификации и Пользователя ---
+  // --- Sign Out Function ---
+  const handleSignOut = useCallback(async () => {
+    try {
+      await signOut(auth);
+      // Clean up UI state
+      setSelectedVideo(null); 
+      setVideos([]);
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  }, [auth]);
+
+  // --- Auth Initialization and Listener ---
   useEffect(() => {
-    // 1. Установка состояния аутентификации
+    // 1. Authentication State Listener
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserId(user.uid);
-        // В реальном приложении здесь можно загрузить имя пользователя из Firestore
         setUserName(user.email || `Пользователь-${user.uid.substring(0, 4)}`);
       } else {
         setUserId(null);
         setUserName('Анонимный Пользователь');
+        
+        // If user explicitly signs out, we sign them in anonymously 
+        // to ensure they can still read public data and log in again.
+        if (!auth.currentUser) {
+           await signInAnonymously(auth);
+        }
       }
       setIsAuthReady(true);
     });
 
-    // 2. Первоначальный вход
+    // 2. Initial Sign-in Attempt
     const signInUser = async () => {
       try {
         if (initialAuthToken) {
@@ -57,7 +74,7 @@ const App = () => {
           await signInAnonymously(auth);
         }
       } catch (error) {
-        console.error("Ошибка аутентификации Firebase:", error);
+        console.error("Firebase authentication error:", error);
       }
     };
 
@@ -68,9 +85,10 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  // --- Загрузка Списка Видео (Публичные данные) ---
+  // --- Load Video List (Public Data) ---
   useEffect(() => {
-    if (!isAuthReady) return;
+    // GUARD: Only query Firestore once authentication state is known
+    if (!isAuthReady) return; 
 
     const videosCollectionPath = `artifacts/${appId}/public/data/videos`;
     const q = query(collection(db, videosCollectionPath), orderBy('timestamp', 'desc'));
@@ -79,24 +97,25 @@ const App = () => {
       const videoList = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        // Преобразование likes в объект для удобства
+        // Convert likes map to object and calculate count
         likes: doc.data().likes || {},
-        likeCount: Object.keys(doc.data().likes || {}).length
+        // Filter out false/null likes when counting
+        likeCount: Object.values(doc.data().likes || {}).filter(val => val).length
       }));
       setVideos(videoList);
-      // Если видео не выбрано, выбираем первое
+      // Select the first video if none is selected
       if (!selectedVideo && videoList.length > 0) {
         setSelectedVideo(videoList[0]);
       }
     }, (error) => {
-      console.error("Ошибка загрузки видео:", error);
+      console.error("Error fetching videos:", error); 
     });
 
     return () => unsubscribe();
   }, [isAuthReady, selectedVideo]);
 
 
-  // --- Загрузка Комментариев для Выбранного Видео (Реалтайм) ---
+  // --- Load Comments for Selected Video (Real-time) ---
   useEffect(() => {
     if (!isAuthReady || !selectedVideo?.id) {
       setComments([]);
@@ -106,18 +125,18 @@ const App = () => {
     setLoadingComments(true);
     const commentsCollectionPath = `artifacts/${appId}/public/data/comments`;
     
-    // Запрос с фильтрацией и сортировкой, требующий индекса (который вы, надеюсь, создали!)
+    // Query with filtering and sorting (requires index)
     const q = query(
       collection(db, commentsCollectionPath),
       where('videoId', '==', selectedVideo.id),
-      orderBy('timestamp', 'asc') // Сортировка по возрастанию времени
+      orderBy('timestamp', 'asc') 
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const loadedComments = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        // Форматирование временной метки для отображения
+        // Format timestamp for display
         displayTime: doc.data().timestamp?.toDate()?.toLocaleTimeString('ru-RU', { 
           day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' 
         }) || 'Только что'
@@ -125,7 +144,7 @@ const App = () => {
       setComments(loadedComments);
       setLoadingComments(false);
     }, (error) => {
-      console.error("Ошибка загрузки комментариев:", error);
+      console.error("Error loading comments:", error);
       setLoadingComments(false);
     });
 
@@ -133,48 +152,40 @@ const App = () => {
   }, [isAuthReady, selectedVideo?.id]);
 
 
-  // --- ФУНКЦИЯ ИСПРАВЛЕНИЯ #1: Быстрое обновление Лайков ---
+  // --- Like/Unlike Function (Optimized for speed) ---
   const handleLike = useCallback(async (video) => {
     if (!userId) {
-      console.warn("Пользователь не авторизован для постановки лайка.");
-      // В реальном приложении покажите модальное окно с сообщением
+      console.warn("User is not authenticated to like.");
       return;
     }
     
     const videoRef = doc(db, `artifacts/${appId}/public/data/videos`, video.id);
     const currentLikes = video.likes || {};
-    const hasLiked = !!currentLikes[userId];
+    // Check if the current user has a TRUE value for their like
+    const hasLiked = currentLikes[userId] === true;
     
-    // Подготовка данных для атомарного обновления
     const updateData = {};
 
     if (hasLiked) {
-      // Удаляем лайк: Firestore.FieldValue.delete() недоступен напрямую
-      // Используем простой объект, но делаем обновление атомарным
-      // Внимание: для удаления поля вложенного объекта нужно знать путь
-      updateData[`likes.${userId}`] = false; // Установка false или удаление
+      updateData[`likes.${userId}`] = false; // Mark as unliked (or remove if using server-side rules)
     } else {
-      // Ставим лайк: устанавливаем текущее время или булево true
-      updateData[`likes.${userId}`] = true;
+      updateData[`likes.${userId}`] = true; // Mark as liked
     }
     
     try {
-      // Это атомарная операция, которая должна быть очень быстрой
+      // Atomic update for fast operation
       await updateDoc(videoRef, updateData);
-      // UI обновится автоматически благодаря onSnapshot
     } catch (error) {
-      console.error("Ошибка при обновлении лайка:", error);
-      // В случае ошибки, вы можете откатить локальное состояние, если бы оно было
+      console.error("Error updating like status:", error);
     }
   }, [userId]);
 
 
-  // --- ФУНКЦИЯ ИСПРАВЛЕНИЯ #2: Отправка Комментария ---
+  // --- Comment Submission Function ---
   const handleCommentSubmit = useCallback(async (e) => {
     e.preventDefault();
     if (!userId || !selectedVideo?.id || !newCommentText.trim()) {
-      console.warn("Невозможно отправить комментарий: нет пользователя, видео или текста.");
-      // В реальном приложении покажите модальное окно с предупреждением
+      console.warn("Cannot submit comment: missing user, video, or text.");
       return;
     }
     
@@ -183,22 +194,20 @@ const App = () => {
     const newComment = {
       videoId: selectedVideo.id,
       userId: userId,
-      userName: userName, // Используем имя пользователя из состояния
+      userName: userName, 
       text: newCommentText.trim(),
-      timestamp: serverTimestamp(), // Обязательно используем серверную метку времени
+      timestamp: serverTimestamp(), // Use server timestamp for reliable ordering
     };
     
     try {
       await addDoc(collection(db, commentsCollectionPath), newComment);
-      setNewCommentText(''); // Очистить поле ввода после успешной отправки
-      // UI обновится автоматически благодаря onSnapshot
+      setNewCommentText(''); // Clear input on success
     } catch (error) {
-      console.error("Ошибка при добавлении комментария:", error);
-      // В случае ошибки, вы можете показать сообщение об ошибке пользователю
+      console.error("Error adding comment:", error);
     }
   }, [userId, userName, selectedVideo?.id, newCommentText]);
 
-  // Вывод "заглушки" пока не готова аутентификация
+  // Display "Loading" until authentication state is resolved
   if (!isAuthReady) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -207,14 +216,34 @@ const App = () => {
     );
   }
 
-  // Рендер компонентов
+  // Render components
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row font-sans p-4 md:p-6">
       
-      {/* Левая панель: Список Видео */}
+      {/* Left Panel: Video List and Auth Info */}
       <div className="md:w-1/4 w-full md:pr-4 mb-6 md:mb-0">
         <h2 className="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">Видеолента</h2>
-        <div className="space-y-3 max-h-[80vh] overflow-y-auto">
+        
+        {/* User Panel and Sign Out */}
+        <div className="p-3 mb-4 bg-white rounded-lg shadow-md border border-indigo-200">
+             <div className="flex justify-between items-center mb-2">
+                <p className="font-semibold text-gray-900">
+                    <User size={16} className="inline mr-2 text-indigo-600"/>
+                    Вы: {userName}
+                </p>
+                <button 
+                  onClick={handleSignOut}
+                  className="flex items-center text-sm px-3 py-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                  title="Выйти из текущего аккаунта"
+                >
+                  <LogOut size={14} className="mr-1"/> Выход
+                </button>
+             </div>
+             <p className="text-xs text-gray-500 truncate">ID: {userId}</p>
+        </div>
+
+        {/* Video List */}
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
           {videos.map(video => (
             <div
               key={video.id}
@@ -234,15 +263,15 @@ const App = () => {
               </div>
             </div>
           ))}
-          {videos.length === 0 && <p className="text-gray-500">Нет доступных видео.</p>}
+          {videos.length === 0 && <p className="text-gray-500 p-3 bg-white rounded-lg shadow-md">Нет доступных видео.</p>}
         </div>
       </div>
 
-      {/* Правая панель: Плеер и Комментарии */}
+      {/* Right Panel: Player and Comments */}
       <div className="md:w-3/4 w-full bg-white rounded-xl shadow-2xl p-6">
         {selectedVideo ? (
           <>
-            {/* Видеоплеер (Заглушка) */}
+            {/* Video Player Placeholder */}
             <div className="aspect-video bg-gray-900 rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
               <div className="text-white text-2xl font-bold p-4 text-center">
                 {selectedVideo.title}
@@ -253,17 +282,14 @@ const App = () => {
               </div>
             </div>
 
-            {/* Информация о Видео и Лайки */}
+            {/* Video Info and Likes */}
             <div className="flex justify-between items-start mb-4 border-b pb-4">
               <div>
                 <h1 className="text-3xl font-extrabold text-gray-900 mb-1">{selectedVideo.title}</h1>
                 <p className="text-base text-gray-600 mb-2">{selectedVideo.description}</p>
-                <div className="text-sm text-gray-400">
-                   <User size={14} className="inline mr-1"/>Вы вошли как: {userName} (ID: {userId.substring(0, 8)}...)
-                </div>
               </div>
 
-              {/* Кнопка Лайка (FIXED) */}
+              {/* Like Button */}
               <button
                 onClick={() => handleLike(selectedVideo)}
                 className={`flex items-center px-4 py-2 rounded-full transition-all duration-300 
@@ -275,10 +301,10 @@ const App = () => {
               </button>
             </div>
 
-            {/* Раздел Комментариев */}
+            {/* Comments Section */}
             <h2 className="text-2xl font-bold mb-4 text-gray-800">Комментарии ({comments.length})</h2>
             
-            {/* Форма Отправки Комментария (FIXED) */}
+            {/* Comment Submission Form */}
             <form onSubmit={handleCommentSubmit} className="mb-6 flex space-x-2">
               <textarea
                 value={newCommentText}
@@ -298,7 +324,7 @@ const App = () => {
               </button>
             </form>
 
-            {/* Список Комментариев */}
+            {/* Comments List */}
             {loadingComments ? (
               <p className="text-gray-500">Загрузка комментариев...</p>
             ) : (

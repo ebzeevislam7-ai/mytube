@@ -47,7 +47,6 @@ function deleteVideo(docId, title) {
     db.collection("videos").doc(docId).delete()
         .then(() => {
             uploadStatus.textContent = `✅ Видео "${title}" успешно удалено.`;
-            // ВАЖНО: Видео из Cloudinary и комментарии из Firestore нужно удалять вручную или через Cloud Functions.
         })
         .catch(error => {
             console.error("Error removing document: ", error);
@@ -69,6 +68,8 @@ const db = firebase.firestore();
 let currentVideoId = null; 
 let allVideos = []; // Stores all videos for recommendations and rendering
 let commentsUnsubscribe = null; // Listener for comments (must be cleaned up)
+let currentLikes = {}; // { videoId: { likeId: { userId, videoId } } } - Store fetched likes
+let currentVideoLikesUnsubscribe = null; // Listener for likes on the currently viewed video
 
 // --- UI Elements ---
 const googleLoginBtn = document.getElementById('google-login-btn');
@@ -105,10 +106,14 @@ function showPage(pageName) {
         mainGridView.classList.remove('hidden');
         watchPageView.classList.add('hidden');
         currentVideoId = null;
-        // Clean up old comment listener
+        // Clean up old listeners
         if (commentsUnsubscribe) {
             commentsUnsubscribe();
             commentsUnsubscribe = null;
+        }
+        if (currentVideoLikesUnsubscribe) {
+            currentVideoLikesUnsubscribe();
+            currentVideoLikesUnsubscribe = null;
         }
     } else if (pageName === 'watch') {
         mainGridView.classList.add('hidden');
@@ -128,13 +133,14 @@ function navigateToVideo(videoId) {
 
     renderWatchPage(videoData);
     setupCommentsListener(videoId);
+    setupLikesListener(videoId); // НОВЫЙ ЛИСЕНЕР ДЛЯ ЛАЙКОВ
 }
 
 // =======================================================================
 // 5. RENDER FUNCTIONS
 // =======================================================================
 
-// Renders the main video grid cards (Subscribed via Firestore snapshot)
+// Renders the main video grid cards 
 function renderVideos(snapshot) {
     videoGrid.innerHTML = '';
     allVideos = []; 
@@ -154,7 +160,8 @@ function renderVideos(snapshot) {
         const date = video.timestamp ? 
                      video.timestamp.toDate().toLocaleDateString('ru-RU') : 
                      '—';
-        const likesCount = Object.keys(video.likes || {}).length;
+        // Теперь счетчик лайков берется из глобального состояния currentLikes
+        const likesCount = Object.keys(currentLikes[doc.id] || {}).length; 
 
         const card = document.createElement('div');
         card.className = 'video-card glass-card p-4 rounded-xl transition transform hover:scale-[1.02] hover:shadow-2xl cursor-pointer'; 
@@ -171,7 +178,7 @@ function renderVideos(snapshot) {
                 <p class="text-gray-400">Опубликовано: ${date}</p>
                 <p class="text-gray-400 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 mr-1 text-red-500">
-                        <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.716 3 7.688 3A5.5 5.5 0 0 1 12 5.059 5.5 5.5 0 0 1 16.313 3c2.973 0 5.439 2.322 5.439 5.25 0 3.924-2.438 7.11-4.75 8.825a25.179 25.179 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.001.001A.752.752 0 0 1 12 21Z" />
+                        <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.716 3 7.688 3A5.5 5.5 0 0 1 12 5.059 5.5 5.5 0 0 1 16.313 3c2.973 0 5.439 2.322 5.439 5.25 0 3.924-2.438 7.11-4.75 8.825a25.179 25.179 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.001.001A.752.752 0 0 0 12 21Z" />
                     </svg>
                     ${likesCount}
                 </p>
@@ -186,11 +193,11 @@ function renderVideos(snapshot) {
     });
 }
 
-// Renders the single video watch page
+// Renders the single video watch page (updates likes based on currentLikes state)
 function renderWatchPage(video) {
     const isCurrentUserAdmin = auth.currentUser && isAdmin(auth.currentUser);
 
-    // 1. Render Player
+    // 1. Render Player (unchanged)
     videoPlayerContainer.innerHTML = `
         <video id="main-video-player" controls class="video-player">
             <source src="${video.url}" type="video/mp4">
@@ -198,11 +205,16 @@ function renderWatchPage(video) {
         </video>
     `;
 
-    // 2. Render Metadata and Like button
-    const likesCount = Object.keys(video.likes || {}).length;
+    // 2. Render Metadata and Like button (UPDATED LOGIC)
+    const currentVideoLikes = currentLikes[video.id] || {};
+    const likesCount = Object.keys(currentVideoLikes).length;
     const currentUserId = auth.currentUser ? auth.currentUser.uid : null;
-    const isLiked = currentUserId && video.likes && video.likes[currentUserId];
     
+    // Проверяем, лайкнул ли пользователь. Ищем likeId, где userId совпадает
+    const userLikeEntry = Object.entries(currentVideoLikes).find(([id, like]) => like.userId === currentUserId);
+    const isLiked = !!userLikeEntry;
+    const existingLikeId = userLikeEntry ? userLikeEntry[0] : null;
+
     videoMetadataSection.innerHTML = `
         <h2 class="text-3xl font-bold mb-3">${video.title}</h2>
         <div class="flex items-center justify-between">
@@ -226,16 +238,20 @@ function renderWatchPage(video) {
         </div>
     `;
     
-    // Add Like listener
+    // Add Like listener (UPDATED LOGIC)
     document.getElementById('like-btn')?.addEventListener('click', () => {
         if (currentUserId) {
-            toggleLike(video.id, currentUserId);
+            // Передаем существующий likeId, если он есть
+            toggleLike(video.id, currentUserId, existingLikeId);
+        } else {
+            uploadStatus.textContent = '❌ Войдите, чтобы ставить лайки.';
         }
     });
 
     // 3. Render Recommendations
     renderRecommendations(video.id);
 }
+
 
 // Renders the recommendations sidebar
 function renderRecommendations(excludeId) {
@@ -254,7 +270,8 @@ function renderRecommendations(excludeId) {
     recommendations.forEach(video => {
         const date = video.timestamp ? 
                      video.timestamp.toDate().toLocaleDateString('ru-RU') : '—';
-        const likesCount = Object.keys(video.likes || {}).length;
+        // Лайки из глобального состояния
+        const likesCount = Object.keys(currentLikes[video.id] || {}).length; 
 
         const recItem = document.createElement('div');
         recItem.className = 'flex space-x-3 glass-card p-3 rounded-xl cursor-pointer hover:bg-white/10 transition';
@@ -275,34 +292,73 @@ function renderRecommendations(excludeId) {
 }
 
 // =======================================================================
-// 6. LIKES LOGIC (Transaction)
+// 6. LIKES LOGIC (NEW, using 'likes' collection)
 // =======================================================================
-function toggleLike(videoId, userId) {
-    if (!userId) return;
 
-    const videoRef = db.collection("videos").doc(videoId);
-    
-    // Используем Transaction для безопасного обновления лайков
-    db.runTransaction(transaction => {
-        return transaction.get(videoRef).then(doc => {
-            if (!doc.exists) throw new Error("Video document does not exist!");
-            
-            const likes = doc.data().likes || {};
-            const isLiked = !!likes[userId];
-
-            if (isLiked) {
-                // Unlike
-                transaction.update(videoRef, { [`likes.${userId}`]: firebase.firestore.FieldValue.delete() });
-            } else {
-                // Like
-                transaction.update(videoRef, { [`likes.${userId}`]: true });
-            }
+// Handles adding or removing a like
+function toggleLike(videoId, userId, existingLikeId) {
+    if (existingLikeId) {
+        // Дизлайк: удаляем документ
+        db.collection("likes").doc(existingLikeId).delete()
+            .then(() => {
+                uploadStatus.textContent = '💔 Дизлайк удален!';
+            })
+            .catch(error => {
+                console.error("Dislike Failed:", error);
+                uploadStatus.textContent = `❌ Ошибка при снятии лайка: ${error.message}`;
+            });
+    } else {
+        // Лайк: добавляем новый документ
+        db.collection("likes").add({
+            videoId: videoId,
+            userId: userId,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .then(() => {
+            uploadStatus.textContent = '❤️ Лайк поставлен!';
+        })
+        .catch(error => {
+            console.error("Like Failed:", error);
+            uploadStatus.textContent = `❌ Ошибка при постановке лайка: ${error.message}`;
         });
-    }).catch(error => {
-        console.error("Like Transaction Failed:", error);
-        uploadStatus.textContent = `❌ Ошибка при обработке лайка: ${error.message}`;
-    });
+    }
+    setTimeout(() => uploadStatus.textContent = '', 3000); 
 }
+
+// Global listener for all likes to update the main grid and state
+db.collection("likes").onSnapshot(snapshot => {
+    const newLikes = {};
+    
+    // Группируем лайки по videoId
+    snapshot.forEach(doc => {
+        const like = doc.data();
+        const videoId = like.videoId;
+        
+        if (!newLikes[videoId]) {
+            newLikes[videoId] = {};
+        }
+        // Храним данные о лайке (docId и userId)
+        newLikes[videoId][doc.id] = { userId: like.userId, videoId: like.videoId };
+    });
+    
+    currentLikes = newLikes;
+    
+    // Если мы на главной странице, перерисовываем видео для обновления счетчиков
+    if (!currentVideoId) {
+        // Вызываем рендеринг, используя текущие данные allVideos 
+        // (чтобы избежать повторного запроса к коллекции videos)
+        renderVideos(db.collection("videos").orderBy("timestamp", "desc").get()); 
+    }
+    
+    // Если мы на странице просмотра, вызываем рендеринг страницы
+    if (currentVideoId) {
+        const latestVideoData = allVideos.find(v => v.id === currentVideoId);
+        if (latestVideoData) renderWatchPage(latestVideoData);
+    }
+}, error => {
+    console.error("Error fetching all likes:", error);
+});
+
 
 // =======================================================================
 // 7. COMMENTS LOGIC (Real-time)
@@ -317,7 +373,6 @@ function setupCommentsListener(videoId) {
     commentsList.innerHTML = '<p class="text-gray-400">Загрузка комментариев...</p>';
 
     // Subscribe to new listener
-    // ВАЖНО: Этот запрос требует составного индекса в Firestore (videoId, timestamp)
     commentsUnsubscribe = db.collection("comments")
         .where("videoId", "==", videoId)
         .orderBy("timestamp", "asc")
@@ -496,7 +551,6 @@ const uploadWidget = cloudinary.createUploadWidget({
             author: user.displayName || user.email.split('@')[0],
             authorUid: user.uid,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            likes: {} // Инициализируем пустой map для лайков
         })
         .then(() => {
             uploadStatus.textContent = `✅ Видео "${title}" успешно опубликовано!`;
@@ -539,15 +593,9 @@ document.getElementById('upload-widget').addEventListener('click', () => {
 // =======================================================================
 // Подписываемся на ВСЕ видео, отсортированные по времени создания (новые сверху)
 db.collection("videos").orderBy("timestamp", "desc").onSnapshot(snapshot => {
-    // Эта функция будет вызываться каждый раз, когда данные изменяются (добавление, удаление, лайк)
-    renderVideos(snapshot);
-
-    // Если пользователь находится на странице просмотра, перерисовываем метаданные, 
-    // чтобы обновить счетчик лайков
-    if (currentVideoId) {
-         const latestVideoData = allVideos.find(v => v.id === currentVideoId);
-         if (latestVideoData) renderWatchPage(latestVideoData);
-    }
+    // Эта функция будет вызываться только при изменении видео-документов (title, url)
+    // Лайки обновляются отдельным лисенером (см. п.6)
+    renderVideos(snapshot); 
     
 }, error => {
     console.error("Error fetching videos:", error);
